@@ -7,15 +7,11 @@
 
 import SwiftUI
 
+//content utamanya disini aja
+// checking swift data, ngecek onboarding, permission maybe, dsb
 struct ContentView: View {
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
+        OnBoardingView() // defaultnya OnBoarding dulu
     }
 }
 
