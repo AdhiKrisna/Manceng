@@ -6,3 +6,15 @@
 //
 
 import Foundation
+import SwiftUI
+
+struct MapView: View {
+    var body: some View {
+        Text("Ini Map")
+    }
+}
+
+
+#Preview {
+    MapView()
+}
