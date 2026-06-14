@@ -7,17 +7,12 @@
 import SwiftUI
 
 struct CustomTabBar: View {
-    let gold = Color(
-        red: 191 / 255,
-        green: 142 / 255,
-        blue: 0 / 255
-    )
     var body: some View {
         ZStack(alignment: .top) {
             // Background capsule only
             Capsule()
                 .frame(width: 289, height: 88)
-                .foregroundStyle(.brown)
+                .foregroundStyle(Color.NeutralColorPrimaryBrown1)
                 .shadow(
                     color: .black.opacity(0.15),
                     radius: 10,
@@ -42,7 +37,7 @@ struct CustomTabBar: View {
                     ZStack {
                         Circle()
                             .frame(width: 120, height: 120)
-                            .foregroundStyle(.brown)
+                            .foregroundStyle(Color.NeutralColorPrimaryBrown1)
                         
                         tabButton(icon: .camera, size: 44)
                     }

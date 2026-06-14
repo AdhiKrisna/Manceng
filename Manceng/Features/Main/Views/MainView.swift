@@ -16,7 +16,7 @@ struct HomeView: View {
                 Spacer()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.yellow)
+            .background(Color.BrandColorPrimaryYellow)
             .ignoresSafeArea()
             .overlay(alignment: .bottom) {
                 CustomTabBar()
