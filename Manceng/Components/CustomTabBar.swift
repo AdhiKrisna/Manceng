@@ -6,63 +6,66 @@
 //
 import SwiftUI
 
+
 struct CustomTabBar: View {
+    @Binding var selectedTab: MainView.Tab
+    let onCamera: () -> Void
+
     var body: some View {
-        ZStack(alignment: .top) {
-            // Background capsule only
-            Capsule()
-                .frame(width: 289, height: 88)
-                .foregroundStyle(Color.NeutralColorPrimaryBrown1)
-                .shadow(
-                    color: .black.opacity(0.15),
-                    radius: 10,
-                    y: 4
-                )
-
-            // Icons
-            HStack {
-                Spacer()
-                NavigationLink {
-                    MapView()
-                } label: {
-                    tabButton(icon: .map, size: 30)
+        HStack {
+            HStack(spacing: 4) {
+                TabBarItem(icon: "house.fill", label: "Home", isSelected: selectedTab == .home) {
+                    selectedTab = .home
                 }
-
-                Spacer()
-
-                // Camera button dengan circle sendiri
-                NavigationLink {
-                    CameraView()
-                } label: {
-                    ZStack {
-                        Circle()
-                            .frame(width: 120, height: 120)
-                            .foregroundStyle(Color.NeutralColorPrimaryBrown1)
-                        
-                        tabButton(icon: .camera, size: 44)
-                    }
-                    .offset(y: -16)
+                TabBarItem(icon: "map.fill", label: "Maps", isSelected: selectedTab == .map) {
+                    selectedTab = .map
                 }
-
-                Spacer()
-
-                NavigationLink {
-                    HistoryView()
-                } label: {
-                    tabButton(icon: .history, size: 30)
+                TabBarItem(icon: "fish.fill", label: "History", isSelected: selectedTab == .history) {
+                    selectedTab = .history
                 }
-                Spacer()
             }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 58)
-            .frame(height: 88)
-        }
-        .frame(height: 120)
-    }
+            .padding(6)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
 
-    @ViewBuilder
-    private func tabButton(icon: AppIcons, size: CGFloat) -> some View {
-        Image(systemName: icon.systemName)
-            .font(.system(size: size))
+            Spacer()
+
+            Button(action: onCamera) {
+                Image(systemName: "camera.fill")
+                    .font(.title2)
+                    .frame(width: 52, height: 52)
+                    .background(.regularMaterial, in: Circle())
+            }
+            .foregroundStyle(.primary)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 8)
+        .background(.ultraThinMaterial)
     }
 }
+
+struct TabBarItem: View {
+    let icon: String
+    let label: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 3) {
+                Image(systemName: icon)
+                    .font(.system(size: 18))
+                Text(label)
+                    .font(.caption2)
+            }
+            .foregroundStyle(isSelected ? .primary : .secondary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            .background(
+                isSelected ? Color.primary.opacity(0.12) : Color.clear,
+                in: RoundedRectangle(cornerRadius: 14)
+            )
+        }
+    }
+}
+
