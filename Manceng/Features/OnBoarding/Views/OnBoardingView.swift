@@ -9,7 +9,8 @@ import SwiftUI
 
 struct OnBoardingView: View {
     var body: some View {
-        Text("Onboarding View")
+        Text("SAYA SUKA KRISNA")
+            .font(.LargeTitleBlack)
     }
 }
 
