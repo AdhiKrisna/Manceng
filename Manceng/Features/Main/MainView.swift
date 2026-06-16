@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct MainView: View {
-    @State private var selectedTab: Tab = .home
+    @Binding var selectedTab: Tab
     @State private var path = NavigationPath()
 
     enum Tab: Hashable {
@@ -15,20 +15,47 @@ struct MainView: View {
     var body: some View {
         NavigationStack(path: $path) {
             TabView(selection: $selectedTab) {
-                HomeView().tag(Tab.home)
-                MapView().tag(Tab.map)
-                HistoryView().tag(Tab.history)
+                HomeView()
+                    .tabItem {
+                        Label("Home", systemImage: "house.fill")
+                    }
+                    .tag(Tab.home)
+                
+                MapView()
+                    .tabItem {
+                        Label("Maps", systemImage: "map.fill")
+                    }
+                    .tag(Tab.map)
+                
+                HistoryView()
+                    .tabItem {
+                        Label("History", systemImage: "fish.fill")
+                    }
+                    .tag(Tab.history)
             }
-            .toolbar(.hidden, for: .tabBar)
+            .tint(.NeutralColorPrimaryWhite)
+            .toolbarBackground(.ultraThinMaterial, for: .tabBar)
+            .toolbarBackground(.visible, for: .tabBar)
             .animation(.none, value: selectedTab)
             .safeAreaInset(edge: .bottom) {
-                CustomTabBar(selectedTab: $selectedTab) {
-                    path.append(Destination.camera)
+                HStack {
+                    Spacer()
+                    Button(action: {
+                        path.append(Destination.camera)
+                    }) {
+                        Image(systemName: "camera.fill")
+                            .font(.title2)
+                            .frame(width: 56, height: 56)
+                            .background(.regularMaterial, in: Circle())
+                    }
+                    .foregroundStyle(Color.NeutralColorPrimaryWhite)
+                    .padding(.trailing, 20)
+                    .padding(.bottom, 8)
                 }
             }
             .navigationDestination(for: Destination.self) { destination in
                 switch destination {
-                case .camera: CameraView()
+                    case .camera: CameraView()
                 }
             }
         }
@@ -36,5 +63,5 @@ struct MainView: View {
 }
 
 #Preview {
-    MainView()
+    MainView(selectedTab: .constant(.home))
 }

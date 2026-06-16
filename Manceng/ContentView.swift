@@ -10,8 +10,29 @@ import SwiftUI
 //content utamanya disini aja
 // checking swift data, ngecek onboarding, permission maybe, dsb
 struct ContentView: View {
+    @State private var hasCompletedOnboarding = false
+    @State private var hasCompletedMainWalkthrough = false
+    @State private var selectedMainTab: MainView.Tab = .home
+    
     var body: some View {
-        OnBoardingView() // defaultnya OnBoarding dulu
+        if hasCompletedOnboarding {
+            ZStack {
+                MainView(selectedTab: $selectedMainTab)
+                
+                if !hasCompletedMainWalkthrough {
+                    MainWalkthroughView(
+                        selectedTab: $selectedMainTab,
+                        onComplete: {
+                            hasCompletedMainWalkthrough = true
+                        }
+                    )
+                }
+            }
+        } else {
+            OnBoardingView {
+                hasCompletedOnboarding = true
+            }
+        }
     }
 }
 
