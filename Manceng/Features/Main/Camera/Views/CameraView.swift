@@ -28,18 +28,6 @@ struct CameraView: View {
                 Color.black.opacity(0.18)
                     .ignoresSafeArea()
 
-                GeometryReader { proxy in
-                    if viewModel.arService.isARReady,
-                       let scannedImage = viewModel.scannedImage,
-                       !viewModel.segmentedFishes.isEmpty {
-                        CameraSegmentationOverlay(
-                            image: scannedImage,
-                            fishes: viewModel.segmentedFishes,
-                            displaySize: proxy.size
-                        )
-                    }
-                }
-                .ignoresSafeArea()
             } else {
                 permissionBackground
             }
