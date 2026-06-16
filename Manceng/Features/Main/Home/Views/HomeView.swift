@@ -6,9 +6,12 @@
 //
 
 import SwiftUI
+import SwiftData
 import RealityKit
 
 struct HomeView: View {
+    @Query(sort: \CatchModel.capturedAt, order: .reverse) private var catches: [CatchModel]
+
     @State private var rotationAngle: Angle = .zero
     
     var body: some View {

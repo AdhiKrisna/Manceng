@@ -49,6 +49,34 @@ extension Color {
     static let NeutralColorPrimaryBlack1 = Color(hex:"#000000")
     static let NeutralColorPrimaryBlack2 = Color(hex:"#000000").opacity(0.50)
     static let NeutralColorPrimaryWhite = Color(hex:"#FFFFFF")
+
+    static let brandDark = Color(hex: "060659")
+    static let brandBlue = Color(hex: "0053FF")
+    static let brandCyan = Color(hex: "00C6FF")
+    static let brandBlack = Color(hex: "000000")
+    static let brandWhite = Color(hex: "FFFFFF")
+    static let brandNavy = Color(hex: "02022E")
+    static let brandSky = Color(hex: "0090DF")
+
+    static let catchDetailYellow = LinearGradient(
+        colors: [
+            Color.BrandColorPrimaryYellow,
+            Color(hex: "FFC400")
+        ],
+        startPoint: .top,
+        endPoint: .bottom
+    )
     
 
+}
+
+extension LinearGradient {
+    static let catchDetail = LinearGradient(
+        colors: [
+            Color.BrandColorPrimaryYellow,
+            Color(hex: "FFC400")
+        ],
+        startPoint: .top,
+        endPoint: .bottom
+    )
 }

@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 struct MainView: View {
     @Binding var selectedTab: Tab
@@ -7,6 +8,7 @@ struct MainView: View {
 
     @State private var path = NavigationPath()
     @State private var walkthroughStep = 0
+    @Environment(\.modelContext) private var modelContext
 
     enum Tab: Hashable {
         case home, map, history, camera
