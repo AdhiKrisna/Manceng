@@ -1,4 +1,3 @@
-
 //
 //  HomeView.swift
 //  Manceng
@@ -14,102 +13,233 @@ import Combine
 
 struct HomeView: View {
     @Query(sort: \CatchModel.capturedAt, order: .reverse) private var catches: [CatchModel]
+
+    // Filter beranda (mengubah tampilan + urutan ikan).
+    enum HomeFilter: String, CaseIterable, Identifiable {
+        case latest = "Latest"
+        case weight = "Weight"
+        case length = "Length"
+        var id: String { rawValue }
+    }
+    @State private var selectedFilter: HomeFilter = .latest
+
+    // Gyro untuk memutar FOTO tangkapan (state terisi).
     @State private var rotationAngle: Angle = .zero
     @StateObject private var motionManager = MotionManager()
+
+    // Model 3D ikan untuk state kosong (gyro + drag, dapat ditekan).
+    @StateObject private var model3DMotion = Model3DMotionManager()
+    @State private var interaction = FishInteractionState()
+
+    // Navigasi ke halaman detail.
+    @State private var showDetail = false
+    @State private var detailCatch: CatchModel?
+
+    // Ikan yang sedang fokus di carousel (penentu nilai ruler/berat/judul sticky).
+    @State private var currentCatchID: UUID?
+
+    /// Ikan yang ditampilkan, diurutkan sesuai filter, maksimal 5.
+    private var displayedCatches: [CatchModel] {
+        let sorted: [CatchModel]
+        switch selectedFilter {
+        case .latest: sorted = catches.sorted { $0.capturedAt > $1.capturedAt }
+        case .weight: sorted = catches.sorted { $0.weight > $1.weight }
+        case .length: sorted = catches.sorted { $0.length > $1.length }
+        }
+        return Array(sorted.prefix(5))
+    }
+
+    // Latest → ruler + berat; Length → ruler saja; Weight → berat saja.
+    private var showRuler: Bool { selectedFilter != .weight }
+    private var showWeight: Bool { selectedFilter != .length }
 
     var body: some View {
         ZStack {
             Color.BrandColorPrimaryYellow
                 .ignoresSafeArea()
 
-            if let latestCatch = catches.first {
-                // Show latest catch
-                VStack(spacing: 24) {
-                    Image(uiImage: latestCatch.image)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 200, height: 200)
-                        .rotation3DEffect(
-                            rotationAngle,
-                            axis: (x: 0, y: 1, z: 0)
-                        )
-                        .onAppear {
-                            motionManager.startGyroUpdates { yaw in
-                                rotationAngle = .degrees(yaw * 180 / .pi)
-                            }
-                        }
-                        .onDisappear {
-                            motionManager.stopGyroUpdates()
-                        }
-
-                    VStack(spacing: 8) {
-                        Text(latestCatch.species)
-                            .font(.Title1Semibold)
-                            .foregroundColor(.NeutralColorPrimaryBlack1)
-
-                        HStack(spacing: 16) {
-                            Text(String(format: "%.1f kg", latestCatch.weight))
-                                .font(.Caption1Bold)
-                                .foregroundColor(.NeutralColorPrimaryBlack1.opacity(0.7))
-
-                            Text(String(format: "%.0f cm", latestCatch.length))
-                                .font(.Caption1Bold)
-                                .foregroundColor(.NeutralColorPrimaryBlack1.opacity(0.7))
-                        }
-                    }
-                }
-                .padding(24)
+            if catches.isEmpty {
+                emptyState
             } else {
-                // Show empty state
-                VStack(spacing: 24) {
-                    // 3D Model tenggiri.usdc with gyro rotation
-                    RealityView { content in
-                        do {
-                            let entity = try await Entity.load(named: "tenggiri.usdc")
-                            content.add(entity)
-                        } catch {
-                            print("Failed to load 3D model: \(error)")
-                        }
-                    } placeholder: {
-                        // Placeholder if model fails to load
-                        ZStack {
-                            Rectangle()
-                                .fill(Color.white.opacity(0.3))
-                                .cornerRadius(16)
-
-                            Image(systemName: "fish.fill")
-                                .font(.system(size: 60))
-                                .foregroundColor(.white.opacity(0.8))
-                        }
-                    }
-                    .rotation3DEffect(
-                        rotationAngle,
-                        axis: (x: 0, y: 1, z: 0)
-                    )
-                    .onAppear {
-                        motionManager.startGyroUpdates { yaw in
-                            rotationAngle = .degrees(yaw * 180 / .pi)
-                        }
-                    }
-                    .onDisappear {
-                        motionManager.stopGyroUpdates()
-                    }
-                    .frame(width: 200, height: 200)
-
-                    VStack(spacing: 8) {
-                        Text("No catches recorded yet!")
-                            .font(.Title1Semibold)
-                            .foregroundColor(.NeutralColorPrimaryBlack1)
-
-                        Text("Tap camera button below to get started!")
-                            .font(.Caption1Bold)
-                            .foregroundColor(.NeutralColorPrimaryBlack1.opacity(0.7))
-                            .multilineTextAlignment(.center)
-                    }
-                }
-                .padding(24)
+                filledPager
             }
         }
+        .navigationDestination(isPresented: $showDetail) {
+            if let c = detailCatch {
+                CatchDetailView(
+                    speciesName: c.species.uppercased(),
+                    length: String(format: "%.0f cm", c.length),
+                    weight: String(format: "%.1f Kg", c.weight),
+                    location: c.location ?? "-"
+                )
+            } else {
+                CatchDetailView()
+            }
+        }
+    }
+
+    // MARK: - State terisi: hanya ikan yang bisa di-slide; objek lain sticky
+
+    /// Ikan yang sedang fokus (untuk nilai ruler/berat/judul yang sticky).
+    private var currentCatch: CatchModel? {
+        if let id = currentCatchID {
+            return displayedCatches.first { $0.id == id } ?? displayedCatches.first
+        }
+        return displayedCatches.first
+    }
+
+    private var filledPager: some View {
+        ZStack {
+            // Lapisan ikan — SATU-SATUNYA yang bisa di-slide.
+            fishCarousel
+
+            // Penggaris kiri — sticky (nilai ikut ikan yang sedang fokus).
+            // Karena ada di kiri, preview ikan berikutnya tampak di sisi kanan.
+            if showRuler, let c = currentCatch {
+                HStack {
+                    RulerView(maxCm: max(1, Int(c.length.rounded())))
+                        .padding(.leading, 8)
+                    Spacer()
+                }
+                .allowsHitTesting(false)
+            }
+
+            // Badge berat kanan — sticky. Preview ikan berikutnya tampak di kiri.
+            if showWeight, let c = currentCatch {
+                HStack {
+                    Spacer()
+                    WeightView(weight: c.weight)
+                }
+                .allowsHitTesting(false)
+            }
+
+            // Judul nama ikan — sticky di atas.
+            VStack {
+                Text(currentCatch?.species ?? "")
+                    .font(.Title1Bold)
+                    .foregroundColor(.NeutralColorPrimaryBlack1)
+                    .padding(.top, 8)
+                Spacer()
+            }
+            .allowsHitTesting(false)
+        }
+        .overlay(alignment: .topTrailing) {
+            filterButton
+                .padding(.trailing, 20)
+                .padding(.top, 8)
+        }
+        .onAppear {
+            if currentCatchID == nil { currentCatchID = displayedCatches.first?.id }
+            motionManager.startGyroUpdates { yaw in
+                rotationAngle = .degrees(yaw * 180 / .pi)
+            }
+        }
+        .onDisappear { motionManager.stopGyroUpdates() }
+        .onChange(of: selectedFilter) { _, _ in
+            currentCatchID = displayedCatches.first?.id
+        }
+    }
+
+    // Carousel ikan: paging (center) + ikan tetangga tampil samar (preview).
+    // `fishPeek` = seberapa banyak ikan berikutnya mengintip di tepi.
+    //   Makin BESAR = ikan berikutnya makin dekat/terlihat. Makin KECIL = makin jauh.
+    private let fishPeek: CGFloat = 44
+
+    private var fishCarousel: some View {
+        GeometryReader { geo in
+            let itemWidth = geo.size.width - fishPeek * 2
+
+            ScrollView(.horizontal) {
+                HStack(spacing: 0) {
+                    ForEach(displayedCatches) { c in
+                        let lengthCm = max(1, Int(c.length.rounded()))
+                        let fishHeight = min(max(CGFloat(lengthCm) * 7, 340), 520)
+
+                        Image(uiImage: c.image)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: fishHeight)
+                            .rotation3DEffect(rotationAngle, axis: (x: 0, y: 1, z: 0))
+                            // Lebar slot tetap + tinggi penuh → ikan center horizontal & vertikal.
+                            .frame(width: itemWidth, height: geo.size.height)
+                            .scrollTransition { content, phase in
+                                content
+                                    .opacity(phase.isIdentity ? 1 : 0.25)
+                                    .scaleEffect(phase.isIdentity ? 1 : 0.82)
+                            }
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                detailCatch = c
+                                showDetail = true
+                            }
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            // Margin kiri-kanan = fishPeek → item ter-snap tepat di TENGAH.
+            .contentMargins(.horizontal, fishPeek, for: .scrollContent)
+            .scrollTargetBehavior(.viewAligned)
+            .scrollPosition(id: $currentCatchID)
+            .scrollIndicators(.hidden)
+        }
+    }
+
+    // Tombol filter Liquid Glass + menu pilihan.
+    private var filterButton: some View {
+        Menu {
+            Picker("Filter", selection: $selectedFilter) {
+                ForEach(HomeFilter.allCases) { filter in
+                    Text(filter.rawValue).tag(filter)
+                }
+            }
+        } label: {
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(Color.NeutralColorPrimaryBlack1)
+                .frame(width: 44, height: 44)
+                .glassEffect(.regular.interactive(), in: Circle())
+        }
+    }
+
+    // MARK: - State kosong: model 3D ikan interaktif & dapat ditekan
+
+    private var emptyState: some View {
+        VStack(spacing: 24) {
+            // Hanya dirender saat halaman detail TIDAK aktif: dua RealityView
+            // yang hidup bersamaan saling bentrok (salah satunya jadi kosong).
+            Group {
+                if showDetail {
+                    Color.clear
+                } else {
+                    FishModelView(
+                        motion: model3DMotion,
+                        interaction: interaction,
+                        onSingleTap: {
+                            detailCatch = nil
+                            showDetail = true
+                        },
+                        extraYawDegrees: 90,
+                        fillSize: 0.45,
+                        allowZoom: false
+                    )
+                    .onAppear { model3DMotion.start() }
+                    .onDisappear { model3DMotion.stop() }
+                }
+            }
+            .frame(height: 320)
+
+            VStack(spacing: 8) {
+                Text("No catches recorded yet!")
+                    .font(.Title1Semibold)
+                    .foregroundColor(.NeutralColorPrimaryBlack1)
+
+                Text("Tap camera button below to get started!")
+                    .font(.Caption1Bold)
+                    .foregroundColor(.NeutralColorPrimaryBlack1.opacity(0.7))
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .padding(24)
     }
 }
 
