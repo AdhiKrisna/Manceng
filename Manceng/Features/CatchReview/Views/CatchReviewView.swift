@@ -7,11 +7,15 @@
 
 import SwiftUI
 import CoreLocation
+import SwiftData
 
 struct CatchReviewView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     @StateObject private var viewModel: CatchReviewViewModel
     @State private var showShareTemplate = false
+    @State private var didSave = false
+    @State private var didSaveForShare = false
 
     let locationString: String?
     let latitude: Double?
@@ -84,8 +88,10 @@ struct CatchReviewView: View {
             Spacer()
 
             CircleIconButton(systemName: "square.and.arrow.up") {
+                saveForShareIfNeeded()
                 showShareTemplate = true
             }
+            
         }
         .padding(.horizontal, 20)
         .padding(.top, 8)
@@ -160,11 +166,55 @@ struct CatchReviewView: View {
 
     private var saveButton: some View {
         ButtonOnboard(title: "Save") {
-            onSave(savedCatch)
+            persistCatchIfNeeded()
             dismiss()
         }
     }
 
+    private func persistCatchIfNeeded() {
+        guard !didSave else { return }
+        onSave(savedCatch)
+        didSave = true
+    }
+
+    
+    private func saveForShareIfNeeded() {
+          guard !didSaveForShare else { return }
+
+          let image = viewModel.maskedFishImage ?? viewModel.image ?? UIImage()
+          let imageData = image.pngData()
+
+          var extractedLatitude = latitude
+          var extractedLongitude = longitude
+
+          if let data = imageData,
+             let coordinate = ImageLocationHelper.extractLocation(from: data) {
+              extractedLatitude = coordinate.latitude
+              extractedLongitude = coordinate.longitude
+          }
+
+          let catchModel = CatchModel(
+              image: image,
+              imageData: imageData,
+              species: viewModel.fishName,
+              weight: viewModel.weightValue,
+              length: viewModel.lengthValue,
+              location: locationString ?? "South China Sea",
+              latitude: extractedLatitude,
+              longitude: extractedLongitude,
+              capturedAt: Date()
+          )
+
+          modelContext.insert(catchModel)
+
+          do {
+              try modelContext.save()
+              didSaveForShare = true
+          } catch {
+              print("Failed to save catch for share: \(error.localizedDescription)")
+          }
+      }
+    
     /// Bangun model `Catch` dari hasil review untuk ditampilkan sebagai card di beranda.
     private var savedCatch: CatchModel {
         let image = viewModel.maskedFishImage ?? viewModel.image ?? UIImage()
