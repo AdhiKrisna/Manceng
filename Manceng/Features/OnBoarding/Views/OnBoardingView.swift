@@ -21,7 +21,8 @@ struct OnBoardingView: View {
             TabView(selection: $currentPage) {
                 ForEach(data.indices, id: \.self) { index in
                     OnBoarding(
-                        image: Image(systemName: data[index].image),
+                        image: Image("onboarding")
+                            .resizable(),
                         title: data[index].title,
                         caption: data[index].caption,
                         showDots: data[index].showDots
@@ -40,7 +41,7 @@ struct OnBoardingView: View {
             }
             .padding(.bottom, 40)
         }
-        .background(Color.BrandColorPrimaryYellow.ignoresSafeArea())
+        .background(Color.NeutralColorPrimaryCream.ignoresSafeArea())
     }
 }
 
