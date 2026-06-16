@@ -1,8 +1,10 @@
 import SwiftUI
+import SwiftData
 
 struct MainView: View {
     @State private var selectedTab: Tab = .home
     @State private var path = NavigationPath()
+    @Environment(\.modelContext) private var modelContext
 
     enum Tab: Hashable {
         case home, map, history
@@ -28,7 +30,15 @@ struct MainView: View {
             }
             .navigationDestination(for: Destination.self) { destination in
                 switch destination {
-                case .camera: CameraView()
+                case .camera:
+                    CameraView { savedCatch in
+                        modelContext.insert(savedCatch)
+                        try? modelContext.save()
+                        selectedTab = .home
+                        if !path.isEmpty {
+                            path.removeLast()
+                        }
+                    }
                 }
             }
         }

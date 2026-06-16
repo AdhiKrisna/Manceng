@@ -11,7 +11,8 @@ import SwiftUI
 // checking swift data, ngecek onboarding, permission maybe, dsb
 struct ContentView: View {
     var body: some View {
-        OnBoardingView() // defaultnya OnBoarding dulu
+//        OnBoardingView() // defaultnya OnBoarding dulu
+        MainView()
     }
 }
 
