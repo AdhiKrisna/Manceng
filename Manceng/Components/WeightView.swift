@@ -113,7 +113,7 @@ struct WeightView: View {
 
 // MARK: - Preview
 #Preview {
-    WeightView(weight: 7)
+    WeightView(weight: 10)
         .padding()
         .background(Color.gray.opacity(0.2))
 }

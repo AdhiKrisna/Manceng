@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import Combine
 
 @Model
 final class CatchModel: Identifiable {
@@ -16,6 +17,8 @@ final class CatchModel: Identifiable {
     var weight: Double
     var length: Double
     var location: String?
+    var latitude: Double?
+    var longitude: Double?
     var capturedAt: Date
 
     @Transient var image: UIImage {
@@ -33,6 +36,8 @@ final class CatchModel: Identifiable {
         weight: Double,
         length: Double,
         location: String?,
+        latitude: Double?,
+        longitude: Double?,
         capturedAt: Date = Date()
     ) {
         self.id = id
@@ -41,6 +46,8 @@ final class CatchModel: Identifiable {
         self.weight = weight
         self.length = length
         self.location = location
+        self.latitude = latitude
+        self.longitude = longitude
         self.capturedAt = capturedAt
     }
 }

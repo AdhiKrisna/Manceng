@@ -6,17 +6,29 @@
 //
 
 import SwiftUI
+import CoreLocation
+import SwiftData
 
 struct CatchReviewView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     @StateObject private var viewModel: CatchReviewViewModel
+    @State private var showShareTemplate = false
+    @State private var didSave = false
+    @State private var didSaveForShare = false
 
+    let locationString: String?
+    let latitude: Double?
+    let longitude: Double?
     let onRetake: () -> Void
     let onSave: (CatchModel) -> Void
 
     init(
         image: UIImage?,
         segmentedFishes: [SegmentedFish],
+        locationString: String?,
+        latitude: Double?,
+        longitude: Double?,
         onRetake: @escaping () -> Void,
         onSave: @escaping (CatchModel) -> Void
     ) {
@@ -24,6 +36,9 @@ struct CatchReviewView: View {
             image: image,
             segmentedFishes: segmentedFishes
         ))
+        self.locationString = locationString
+        self.latitude = latitude
+        self.longitude = longitude
         self.onRetake = onRetake
         self.onSave = onSave
     }
@@ -55,6 +70,15 @@ struct CatchReviewView: View {
             }
             .overlay(alignment: .top) { topBar }
         }
+        .fullScreenCover(isPresented: $showShareTemplate) {
+            ShareTemplatesView(
+                fishImage: viewModel.maskedFishImage ?? viewModel.image ?? UIImage(),
+                species: viewModel.fishName,
+                weight: viewModel.weightValue,
+                length: viewModel.lengthValue,
+                location: locationString
+            )
+        }
     }
 
     private var topBar: some View {
@@ -63,18 +87,14 @@ struct CatchReviewView: View {
 
             Spacer()
 
-            ShareLink(item: shareText) {
-                GlassCircleIcon(systemName: "square.and.arrow.up")
-                    .foregroundStyle(.black)
+            CircleIconButton(systemName: "square.and.arrow.up") {
+                saveForShareIfNeeded()
+                showShareTemplate = true
             }
-            .buttonStyle(GlassPressStyle())
+            
         }
         .padding(.horizontal, 20)
         .padding(.top, 8)
-    }
-
-    private var shareText: String {
-        "\(viewModel.fishName) \(viewModel.weightText), \(viewModel.lengthText)"
     }
 
     private func fishPreview(height: CGFloat) -> some View {
@@ -125,7 +145,7 @@ struct CatchReviewView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            field(label: "Location", value: "South China Sea")
+            field(label: "Location", value: locationString ?? "South China Sea")
         }
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -146,23 +166,88 @@ struct CatchReviewView: View {
 
     private var saveButton: some View {
         ButtonOnboard(title: "Save") {
-            onSave(savedCatch)
+            persistCatchIfNeeded()
             dismiss()
         }
     }
 
+    private func persistCatchIfNeeded() {
+        guard !didSave else { return }
+        onSave(savedCatch)
+        didSave = true
+    }
+
+    
+    private func saveForShareIfNeeded() {
+          guard !didSaveForShare else { return }
+
+          let image = viewModel.maskedFishImage ?? viewModel.image ?? UIImage()
+          let imageData = image.pngData()
+
+          var extractedLatitude = latitude
+          var extractedLongitude = longitude
+
+          if let data = imageData,
+             let coordinate = ImageLocationHelper.extractLocation(from: data) {
+              extractedLatitude = coordinate.latitude
+              extractedLongitude = coordinate.longitude
+          }
+
+          let catchModel = CatchModel(
+              image: image,
+              imageData: imageData,
+              species: viewModel.fishName,
+              weight: viewModel.weightValue,
+              length: viewModel.lengthValue,
+              location: locationString ?? "South China Sea",
+              latitude: extractedLatitude,
+              longitude: extractedLongitude,
+              capturedAt: Date()
+          )
+
+          modelContext.insert(catchModel)
+
+          do {
+              try modelContext.save()
+              didSaveForShare = true
+          } catch {
+              print("Failed to save catch for share: \(error.localizedDescription)")
+          }
+      }
+    
     /// Bangun model `Catch` dari hasil review untuk ditampilkan sebagai card di beranda.
     private var savedCatch: CatchModel {
-        CatchModel(
-            image: viewModel.maskedFishImage ?? viewModel.image ?? UIImage(),
+        let image = viewModel.maskedFishImage ?? viewModel.image ?? UIImage()
+        let imageData = image.pngData()
+        var extractedLatitude: Double? = latitude
+        var extractedLongitude: Double? = longitude
+        
+        if let data = imageData,
+           let coordinate = ImageLocationHelper.extractLocation(from: data) {
+            extractedLatitude = coordinate.latitude
+            extractedLongitude = coordinate.longitude
+        }
+        
+        return CatchModel(
+            image: image,
             species: viewModel.fishName,
             weight: viewModel.weightValue,
             length: viewModel.lengthValue,
-            location: "South China Sea"
+            location: locationString ?? "South China Sea",
+            latitude: extractedLatitude,
+            longitude: extractedLongitude
         )
     }
 }
 
 #Preview {
-    CatchReviewView(image: nil, segmentedFishes: [], onRetake: {}, onSave: { _ in })
+    CatchReviewView(
+        image: nil,
+        segmentedFishes: [],
+        locationString: nil,
+        latitude: nil,
+        longitude: nil,
+        onRetake: {},
+        onSave: { _ in }
+    )
 }
