@@ -6,17 +6,25 @@
 //
 
 import SwiftUI
+import CoreLocation
 
 struct CatchReviewView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: CatchReviewViewModel
+    @State private var showShareTemplate = false
 
+    let locationString: String?
+    let latitude: Double?
+    let longitude: Double?
     let onRetake: () -> Void
     let onSave: (CatchModel) -> Void
 
     init(
         image: UIImage?,
         segmentedFishes: [SegmentedFish],
+        locationString: String?,
+        latitude: Double?,
+        longitude: Double?,
         onRetake: @escaping () -> Void,
         onSave: @escaping (CatchModel) -> Void
     ) {
@@ -24,6 +32,9 @@ struct CatchReviewView: View {
             image: image,
             segmentedFishes: segmentedFishes
         ))
+        self.locationString = locationString
+        self.latitude = latitude
+        self.longitude = longitude
         self.onRetake = onRetake
         self.onSave = onSave
     }
@@ -55,6 +66,15 @@ struct CatchReviewView: View {
             }
             .overlay(alignment: .top) { topBar }
         }
+        .fullScreenCover(isPresented: $showShareTemplate) {
+            ShareTemplatesView(
+                fishImage: viewModel.maskedFishImage ?? viewModel.image ?? UIImage(),
+                species: viewModel.fishName,
+                weight: viewModel.weightValue,
+                length: viewModel.lengthValue,
+                location: locationString
+            )
+        }
     }
 
     private var topBar: some View {
@@ -63,18 +83,12 @@ struct CatchReviewView: View {
 
             Spacer()
 
-            ShareLink(item: shareText) {
-                GlassCircleIcon(systemName: "square.and.arrow.up")
-                    .foregroundStyle(.black)
+            CircleIconButton(systemName: "square.and.arrow.up") {
+                showShareTemplate = true
             }
-            .buttonStyle(GlassPressStyle())
         }
         .padding(.horizontal, 20)
         .padding(.top, 8)
-    }
-
-    private var shareText: String {
-        "\(viewModel.fishName) \(viewModel.weightText), \(viewModel.lengthText)"
     }
 
     private func fishPreview(height: CGFloat) -> some View {
@@ -125,7 +139,7 @@ struct CatchReviewView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            field(label: "Location", value: "South China Sea")
+            field(label: "Location", value: locationString ?? "South China Sea")
         }
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -153,16 +167,37 @@ struct CatchReviewView: View {
 
     /// Bangun model `Catch` dari hasil review untuk ditampilkan sebagai card di beranda.
     private var savedCatch: CatchModel {
-        CatchModel(
-            image: viewModel.maskedFishImage ?? viewModel.image ?? UIImage(),
+        let image = viewModel.maskedFishImage ?? viewModel.image ?? UIImage()
+        let imageData = image.pngData()
+        var extractedLatitude: Double? = latitude
+        var extractedLongitude: Double? = longitude
+        
+        if let data = imageData,
+           let coordinate = ImageLocationHelper.extractLocation(from: data) {
+            extractedLatitude = coordinate.latitude
+            extractedLongitude = coordinate.longitude
+        }
+        
+        return CatchModel(
+            image: image,
             species: viewModel.fishName,
             weight: viewModel.weightValue,
             length: viewModel.lengthValue,
-            location: "South China Sea"
+            location: locationString ?? "South China Sea",
+            latitude: extractedLatitude,
+            longitude: extractedLongitude
         )
     }
 }
 
 #Preview {
-    CatchReviewView(image: nil, segmentedFishes: [], onRetake: {}, onSave: { _ in })
+    CatchReviewView(
+        image: nil,
+        segmentedFishes: [],
+        locationString: nil,
+        latitude: nil,
+        longitude: nil,
+        onRetake: {},
+        onSave: { _ in }
+    )
 }

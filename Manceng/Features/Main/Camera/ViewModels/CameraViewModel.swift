@@ -23,6 +23,7 @@ final class CameraViewModel: ObservableObject {
     @Published var showPermissionAlert = false
 
     let arService = ARMeasurementService()
+    let locationService = LocationService()
     private let cameraService = CameraService()
     private let permissionService = CameraPermissionService()
     private let scanIntervalNanoseconds: UInt64 = 900_000_000

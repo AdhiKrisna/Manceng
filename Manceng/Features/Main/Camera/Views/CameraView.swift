@@ -58,6 +58,9 @@ struct CameraView: View {
             CatchReviewView(
                 image: viewModel.capturedImage,
                 segmentedFishes: viewModel.segmentedFishes,
+                locationString: viewModel.locationService.locationString,
+                latitude: viewModel.locationService.currentLocation?.latitude,
+                longitude: viewModel.locationService.currentLocation?.longitude,
                 onRetake: viewModel.retry,
                 onSave: onSave
             )
@@ -68,6 +71,7 @@ struct CameraView: View {
         }
         .task {
             await viewModel.prepareCameraPermission()
+            viewModel.locationService.requestAuthorization()
             showGuide = viewModel.cameraPermissionState.canUseCamera
         }
         .task(id: viewModel.cameraPermissionState) {

@@ -81,7 +81,7 @@ struct RulerView: View {
 
 #Preview {
     ScrollView {
-        RulerView(totalCm: 1, scaleFactor: 1.0)
+        RulerView(totalCm: 23, scaleFactor: 1.0)
             .padding()
             .background(Color.gray.opacity(0.15))
     }
