@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct MancengApp: App {
@@ -13,5 +14,6 @@ struct MancengApp: App {
         WindowGroup {
             ContentView()
         }
+        .modelContainer(for: CatchModel.self)
     }
 }

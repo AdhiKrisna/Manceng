@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 struct MainView: View {
     @Binding var selectedTab: Tab
@@ -7,6 +8,7 @@ struct MainView: View {
 
     @State private var path = NavigationPath()
     @State private var walkthroughStep = 0
+    @Environment(\.modelContext) private var modelContext
 
     enum Tab: Hashable {
         case home, map, history, camera
@@ -39,21 +41,39 @@ struct MainView: View {
                         .tabItem { Label("History", systemImage: "fish.fill") }
                         .tag(Tab.history)
 
-                    // Tab item tetap muncul di tab bar native,
-                    // tapi di-intercept onChange sehingga push navigasi.
+                    // Tab camera sebagai trigger interseptor
                     Color.clear
                         .tabItem { Label("Camera", systemImage: "camera.fill") }
                         .tag(Tab.camera)
                 }
                 .onChange(of: selectedTab) { old, new in
                     if new == .camera {
+                        // Kembalikan seleksi tab ke tab sebelumnya agar posisi tidak stuck di tab kosong
                         selectedTab = old
+                        // Push ke CameraView melalui NavigationPath
                         path.append(Destination.camera)
                     }
                 }
                 .navigationDestination(for: Destination.self) { destination in
                     switch destination {
-                    case .camera: CameraView()
+                    case .camera:
+                        CameraView { catchModel in
+                            // 1. Simpan data ke SwiftData
+                            modelContext.insert(catchModel)
+                            do {
+                                try modelContext.save()
+                            } catch {
+                                print("Failed to save catch: \(error)")
+                            }
+                            
+                            // 2. Set tab kembali ke home setelah selesai memotret/menyimpan
+                            selectedTab = .home
+                            
+                            // 3. KUNCI PERBAIKAN: Pop stack navigasi agar kembali ke MainView asli (bukan tertahan di Camera)
+                            if !path.isEmpty {
+                                path.removeLast()
+                            }
+                        }
                     }
                 }
             }
@@ -88,7 +108,7 @@ struct MainView: View {
         case 0: selectedTab = .home
         case 1: selectedTab = .map
         case 2: selectedTab = .history
-        default: break // camera step: hanya highlight tab, tidak navigasi
+        default: break
         }
     }
 }

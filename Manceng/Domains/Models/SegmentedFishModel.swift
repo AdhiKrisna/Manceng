@@ -5,4 +5,11 @@
 //  Created by Made Vidyatma Adhi Krisna on 10/06/26.
 //
 
-import Foundation
+import UIKit
+import CoreGraphics
+
+struct SegmentedFish: Identifiable {
+    let id = UUID()
+    var fish: DetectedFish
+    let maskImage: UIImage
+}

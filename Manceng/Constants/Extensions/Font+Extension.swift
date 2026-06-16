@@ -14,4 +14,5 @@ extension Font {
     static let Title1Semibold = Font.system(size: 28, weight: .semibold, design: .serif)
     static let Title2Bold = Font.system(size: 28, weight: .bold, design: .serif)
     static let Caption1Bold = Font.system(size: 22, weight: .bold, design: .serif)
+    static let ButtonFont = Font.system(size: 20, weight: .semibold, design: .rounded)
 }
