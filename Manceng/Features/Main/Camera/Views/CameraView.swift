@@ -9,10 +9,15 @@ import SwiftUI
 
 struct CameraView: View {
     var body: some View {
-        Text("Ini Camera")
+        ContentUnavailableView("Camera", systemImage: "camera.fill", description: Text("Coming soon"))
+            .navigationTitle("Scan")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .tabBar)
     }
 }
 
 #Preview {
-    CameraView()
+    NavigationStack {
+        CameraView()
+    }
 }
