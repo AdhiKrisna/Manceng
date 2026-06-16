@@ -33,29 +33,34 @@ struct WalkthroughView: View {
         self.onNext = onNext
     }
     
+    private var isLastStep: Bool { currentStep >= steps.count - 1 }
+
     var body: some View {
         Button(action: onNext) {
-            VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 10) {
                 Text(steps[currentStep].text)
-                    .font(.system(size: 28, weight: .bold, design: .default))
+                    .font(.system(size: 16, weight: .bold, design: .default))
                     .foregroundColor(.black)
                     .multilineTextAlignment(.leading)
-                    .lineLimit(nil)
-                
-                HStack(spacing: 16) {
-                    Text("\(currentStep + 1)/\(steps.count)")
-                        .font(.system(size: 28, weight: .bold, design: .default))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 8) {
+                    Spacer(minLength: 0)
+
+                    Text(isLastStep ? "Start" : "\(currentStep + 1)/\(steps.count)")
+                        .font(.system(size: 16, weight: .bold, design: .default))
                         .foregroundColor(.black)
-                    
+
                     Image(systemName: "arrow.right.circle")
-                        .font(.system(size: 40, weight: .regular))
+                        .font(.system(size: 24, weight: .regular))
                         .foregroundColor(.black)
                 }
             }
-            .padding(24)
+            .padding(18)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(.white.opacity(0.95))
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(.white)
             )
         }
         .buttonStyle(PlainButtonStyle())

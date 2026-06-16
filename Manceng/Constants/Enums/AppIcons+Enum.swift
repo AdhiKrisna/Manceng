@@ -7,12 +7,15 @@
 
 import SwiftUI
 enum AppIcons {
+    case home
     case map
     case camera
     case history
 
     var systemName: String {
         switch self {
+        case .home:
+            return "house.fill"
         case .map:
             return "map.fill"
         case .camera:
@@ -26,7 +29,7 @@ enum AppIcons {
         switch self {
         case .camera:
             return 44
-        case .map, .history:
+        case .home, .map, .history:
             return 30
         }
     }

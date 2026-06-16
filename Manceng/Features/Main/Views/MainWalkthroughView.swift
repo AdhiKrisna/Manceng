@@ -8,57 +8,50 @@
 
 import SwiftUI
 
+/// Dimming + bottom-left tutorial card layer. The tab bar (with its spotlight)
+/// is rendered separately by `MainView` on top of this, so this view only owns
+/// the dark overlay and the step card.
 struct MainWalkthroughView: View {
-    @Binding var selectedTab: MainView.Tab
-    let onComplete: () -> Void
-    @State private var currentStep = 0
-    
-    let steps: [WalkthroughStep] = [
-        WalkthroughStep(text: "View your 5 latest, heaviest, or longest catches."),
-        WalkthroughStep(text: "See all the locations where you caught your fish."),
-        WalkthroughStep(text: "Browse every verified catch you've recorded."),
-        WalkthroughStep(text: "Scan your catch to instantly get species, length, and weight.")
-    ]
-    
+    let steps: [WalkthroughStep]
+    @Binding var currentStep: Int
+    let onNext: () -> Void
+
+    /// Vertical space kept clear at the bottom for the floating tab bar.
+    private let tabBarReservedHeight: CGFloat = 104
+
     var body: some View {
         ZStack {
-            // Dark overlay (#000000 54%)
+            // Dark overlay (#000000 54%) across the whole screen.
             Color.black.opacity(0.54)
                 .ignoresSafeArea()
-            
+
             VStack {
                 Spacer()
-                
-                WalkthroughView(
-                    steps: steps,
-                    currentStep: $currentStep,
-                    onNext: {
-                        if currentStep < steps.count - 1 {
-                            currentStep += 1
-                            updateSelectedTab()
-                        } else {
-                            onComplete()
-                        }
-                    }
-                )
+
+                HStack {
+                    WalkthroughView(
+                        steps: steps,
+                        currentStep: $currentStep,
+                        onNext: onNext
+                    )
+                    .frame(maxWidth: 240)
+
+                    Spacer(minLength: 0)
+                }
+                .padding(.leading, 20)
             }
-            .padding(.bottom, 24)
-        }
-        .onAppear {
-            updateSelectedTab()
-        }
-    }
-    
-    private func updateSelectedTab() {
-        switch currentStep {
-        case 0: selectedTab = .home
-        case 1: selectedTab = .map
-        case 2: selectedTab = .history
-        default: selectedTab = .home
+            .padding(.bottom, tabBarReservedHeight + 12)
         }
     }
 }
 
 #Preview {
-    MainWalkthroughView(selectedTab: .constant(.home), onComplete: {})
+    ZStack {
+        Color.BrandColorPrimaryYellow.ignoresSafeArea()
+        MainWalkthroughView(
+            steps: [WalkthroughStep(text: "View your 5 latest, heaviest, or longest catches.")],
+            currentStep: .constant(0),
+            onNext: {}
+        )
+    }
 }
