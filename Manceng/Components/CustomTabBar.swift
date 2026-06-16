@@ -6,62 +6,70 @@
 //
 import SwiftUI
 
-
 struct CustomTabBar: View {
     @Binding var selectedTab: MainView.Tab
     let onCamera: () -> Void
 
     var body: some View {
-        HStack(spacing: 4) {
-            TabBarItem(icon: "house.fill", label: "Home", isSelected: selectedTab == .home) {
-                selectedTab = .home
+        HStack(spacing: 12) {
+            // Pill: 3 tab items grouped in a capsule container
+            HStack(spacing: 2) {
+                tabItem(.home, label: "Home", tab: .home)
+                tabItem(.map, label: "Maps", tab: .map)
+                tabItem(.history, label: "History", tab: .history)
             }
-            TabBarItem(icon: "map.fill", label: "Maps", isSelected: selectedTab == .map) {
-                selectedTab = .map
-            }
-            TabBarItem(icon: "fish.fill", label: "History", isSelected: selectedTab == .history) {
-                selectedTab = .history
-            }
-        }
-        .padding(6)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
+            .padding(4)
+            .background(Capsule().fill(.background.secondary))
 
-        Spacer()
+            Spacer()
 
-        Button(action: onCamera) {
-            Image(systemName: "camera.fill")
-                .font(.title2)
-                .frame(width: 56, height: 56)
-                .background(.regularMaterial, in: Circle())
+            // Camera: standalone circle at far right
+            Button(action: onCamera) {
+                Image(systemName: AppIcons.camera.systemName)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(.primary)
+                    .frame(width: 52, height: 52)
+                    .background(Circle().fill(.background.secondary))
+            }
+            .buttonStyle(.plain)
         }
-        .foregroundStyle(.primary)
     }
-}
 
-struct TabBarItem: View {
-    let icon: String
-    let label: String
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 3) {
-                Image(systemName: icon)
-                    .font(.system(size: 18))
+    private func tabItem(_ icon: AppIcons, label: String, tab: MainView.Tab) -> some View {
+        Button {
+            selectedTab = tab
+        } label: {
+            VStack(spacing: 2) {
+                Image(systemName: icon.systemName)
+                    .font(.system(size: 20))
                 Text(label)
-                    .font(.caption2)
+                    .font(.system(size: 10, weight: .medium))
             }
-            .foregroundStyle(isSelected ? .primary : .secondary)
-            .frame(maxWidth: .infinity)
+            .foregroundStyle(selectedTab == tab ? .primary : .secondary)
             .padding(.vertical, 8)
-            .padding(.horizontal, 12)
-            .background(
-                isSelected ? Color.primary.opacity(0.12) : Color.clear,
-                in: RoundedRectangle(cornerRadius: 14)
-            )
+            .padding(.horizontal, 14)
+            .background {
+                if selectedTab == tab {
+                    Capsule().fill(.background)
+                }
+            }
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(.plain)
     }
 }
 
+#Preview {
+    ZStack {
+        Color.BrandColorPrimaryYellow.ignoresSafeArea()
+        VStack {
+            Spacer()
+            VStack(spacing: 0) {
+                Divider()
+                CustomTabBar(selectedTab: .constant(.home), onCamera: {})
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+            }
+            .background(.regularMaterial)
+        }
+    }
+}

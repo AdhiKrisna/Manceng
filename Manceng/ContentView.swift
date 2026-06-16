@@ -16,18 +16,13 @@ struct ContentView: View {
     
     var body: some View {
         if hasCompletedOnboarding {
-            ZStack {
-                MainView(selectedTab: $selectedMainTab)
-                
-                if !hasCompletedMainWalkthrough {
-                    MainWalkthroughView(
-                        selectedTab: $selectedMainTab,
-                        onComplete: {
-                            hasCompletedMainWalkthrough = true
-                        }
-                    )
+            MainView(
+                selectedTab: $selectedMainTab,
+                showWalkthrough: !hasCompletedMainWalkthrough,
+                onWalkthroughComplete: {
+                    hasCompletedMainWalkthrough = true
                 }
-            }
+            )
         } else {
             OnBoardingView {
                 hasCompletedOnboarding = true
