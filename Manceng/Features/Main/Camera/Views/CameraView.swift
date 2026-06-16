@@ -328,7 +328,5 @@ private struct ARCameraContainer: UIViewRepresentable {
 }
 
 #Preview {
-    NavigationStack {
-        CameraView()
-    }
+    CameraView()
 }
