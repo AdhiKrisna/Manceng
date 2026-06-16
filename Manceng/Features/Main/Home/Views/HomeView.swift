@@ -12,25 +12,23 @@ struct HomeView: View {
     @Query(sort: \CatchModel.capturedAt, order: .reverse) private var catches: [CatchModel]
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if catches.isEmpty {
-                    Text("Belum ada catch tersimpan")
-                        .font(.headline)
-                        .foregroundStyle(.secondary)
-                } else {
-                    ScrollView {
-                        LazyVStack(spacing: 14) {
-                            ForEach(catches) { item in
-                                catchRow(item)
-                            }
+        Group {
+            if catches.isEmpty {
+                Text("Belum ada catch tersimpan")
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 14) {
+                        ForEach(catches) { item in
+                            catchRow(item)
                         }
-                        .padding(20)
                     }
+                    .padding(20)
                 }
             }
-            .navigationTitle("Home")
         }
+        .navigationTitle("Home")
     }
 
     private func catchRow(_ item: CatchModel) -> some View {

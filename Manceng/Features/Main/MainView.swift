@@ -25,6 +25,7 @@ struct MainView: View {
             .animation(.none, value: selectedTab)
             .safeAreaInset(edge: .bottom) {
                 CustomTabBar(selectedTab: $selectedTab) {
+                    print("[CameraDebug] Camera button tapped from tab=\(selectedTab)")
                     path.append(Destination.camera)
                 }
             }

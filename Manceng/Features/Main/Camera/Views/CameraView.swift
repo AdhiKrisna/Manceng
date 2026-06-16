@@ -14,7 +14,7 @@ struct CameraView: View {
     @StateObject private var viewModel = CameraViewModel()
     /// Tampil otomatis saat masuk layar kamera (kamera sudah jalan di belakang),
     /// lalu bisa dibuka lagi lewat tombol info.
-    @State private var showGuide = false
+    @State private var showGuide = true
 
     /// Dipanggil saat user menekan Save di review — hasil tangkapan dikirim ke beranda.
     var onSave: (CatchModel) -> Void = { _ in }
@@ -22,34 +22,27 @@ struct CameraView: View {
     var body: some View {
         ZStack {
             if viewModel.cameraPermissionState.canUseCamera {
-                ARCameraContainer(
-                    service: viewModel.arService,
-                    shouldRunSession: viewModel.cameraPermissionState.canUseCamera
-                )
-                .ignoresSafeArea()
-            } else {
-                Color.black
+                ARCameraContainer(service: viewModel.arService)
                     .ignoresSafeArea()
-            }
 
-            if viewModel.cameraPermissionState.canUseCamera {
                 Color.black.opacity(0.18)
                     .ignoresSafeArea()
-            }
 
-            GeometryReader { proxy in
-                if viewModel.cameraPermissionState.canUseCamera,
-                   viewModel.arService.isARReady,
-                   let scannedImage = viewModel.scannedImage,
-                   !viewModel.segmentedFishes.isEmpty {
-                    CameraSegmentationOverlay(
-                        image: scannedImage,
-                        fishes: viewModel.segmentedFishes,
-                        displaySize: proxy.size
-                    )
+                GeometryReader { proxy in
+                    if viewModel.arService.isARReady,
+                       let scannedImage = viewModel.scannedImage,
+                       !viewModel.segmentedFishes.isEmpty {
+                        CameraSegmentationOverlay(
+                            image: scannedImage,
+                            fishes: viewModel.segmentedFishes,
+                            displaySize: proxy.size
+                        )
+                    }
                 }
+                .ignoresSafeArea()
+            } else {
+                permissionBackground
             }
-            .ignoresSafeArea()
 
             VStack {
                 topControls
@@ -59,6 +52,8 @@ struct CameraView: View {
                     Spacer()
                     bottomControls
                 } else {
+                    Spacer()
+                    permissionControls
                     Spacer()
                 }
             }
@@ -80,6 +75,7 @@ struct CameraView: View {
             )
         }
         .onDisappear {
+            viewModel.stopScanning()
             viewModel.arService.stop()
         }
         .task {
@@ -92,6 +88,9 @@ struct CameraView: View {
                     showGuide = true
                 }
                 await viewModel.startScanning()
+            } else {
+                viewModel.stopScanning()
+                viewModel.arService.stop()
             }
         }
         .onChange(of: scenePhase) { _, newPhase in
@@ -163,9 +162,55 @@ struct CameraView: View {
         .background(.white.opacity(0.72), in: Capsule())
     }
 
+    private var permissionBackground: some View {
+        LinearGradient(
+            colors: [Color.black, Color.brandBlue.opacity(0.92)],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .ignoresSafeArea()
+    }
+
+    private var permissionControls: some View {
+        VStack(spacing: 18) {
+            Image(systemName: "camera.fill")
+                .font(.system(size: 48, weight: .semibold))
+                .foregroundStyle(.white)
+
+            Text("Camera access needed")
+                .font(.system(size: 22, weight: .bold))
+                .foregroundStyle(.white)
+
+            Text("Allow camera access to open AR measurement and fish detection.")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.white.opacity(0.82))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 28)
+
+            Button {
+                Task {
+                    if viewModel.cameraPermissionState == .notDetermined {
+                        await viewModel.requestCameraPermission()
+                    } else {
+                        viewModel.openSettings()
+                    }
+                }
+            } label: {
+                Text(viewModel.cameraPermissionState == .notDetermined ? "Allow Camera" : "Open Settings")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(.black)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 24)
+        }
+    }
+
     private var bottomControls: some View {
         VStack(spacing: 16) {
-            if let errorMessage = viewModel.errorMessage {
+            if let errorMessage = viewModel.errorMessage ?? viewModel.arService.sessionErrorMessage {
                 Text(errorMessage)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.white)
@@ -282,31 +327,17 @@ private struct CameraSegmentationOverlay: View {
 
 private struct ARCameraContainer: UIViewRepresentable {
     @ObservedObject var service: ARMeasurementService
-    let shouldRunSession: Bool
 
     func makeUIView(context: Context) -> ARSCNView {
         let view = ARSCNView(frame: .zero)
         view.backgroundColor = .black
         service.attach(sceneView: view)
-        if shouldRunSession {
-            service.start()
-        }
+        service.start()
         return view
     }
 
-    func updateUIView(_ uiView: ARSCNView, context: Context) {
-        if shouldRunSession {
-            service.start()
-        } else {
-            service.stop()
-        }
-    }
+    func updateUIView(_ uiView: ARSCNView, context: Context) {}
 }
-
-#Preview {
-    CameraView()
-}
-
 
 #Preview {
     CameraView()

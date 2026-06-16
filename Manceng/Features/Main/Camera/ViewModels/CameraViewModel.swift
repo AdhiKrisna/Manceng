@@ -26,6 +26,7 @@ final class CameraViewModel: ObservableObject {
     private let cameraService = CameraService()
     private let permissionService = CameraPermissionService()
     private let scanIntervalNanoseconds: UInt64 = 900_000_000
+    private var scanningTask: Task<Void, Never>?
 
     var primaryFish: DetectedFish? {
         segmentedFishes.max { $0.fish.confidence < $1.fish.confidence }?.fish
@@ -70,13 +71,17 @@ final class CameraViewModel: ObservableObject {
     }
 
     func prepareCameraPermission() async {
-        let state = permissionService.currentState()
-        cameraPermissionState = state
+        cameraPermissionState = permissionService.currentState()
 
-        if state == .notDetermined {
+        if cameraPermissionState == .notDetermined {
             cameraPermissionState = await permissionService.requestAccess()
         }
 
+        showPermissionAlert = shouldShowPermissionAlert
+    }
+
+    func requestCameraPermission() async {
+        cameraPermissionState = await permissionService.requestAccess()
         showPermissionAlert = shouldShowPermissionAlert
     }
 
@@ -95,14 +100,34 @@ final class CameraViewModel: ObservableObject {
     }
 
     func startScanning() async {
-        while !Task.isCancelled {
-            await scanCurrentFrame()
-            try? await Task.sleep(nanoseconds: scanIntervalNanoseconds)
+        guard cameraPermissionState.canUseCamera else { return }
+        guard scanningTask == nil else { return }
+
+        scanningTask = Task { [weak self] in
+            guard let self else { return }
+
+            while !Task.isCancelled {
+                await self.scanCurrentFrame()
+                try? await Task.sleep(nanoseconds: self.scanIntervalNanoseconds)
+            }
         }
+
+        await scanningTask?.value
+        scanningTask = nil
+    }
+
+    func stopScanning() {
+        scanningTask?.cancel()
+        scanningTask = nil
+        isScanningFish = false
     }
 
     func capture() {
         guard !isProcessing else { return }
+        if let sessionError = arService.sessionErrorMessage {
+            errorMessage = sessionError
+            return
+        }
         guard arService.isARReady else {
             errorMessage = "AR belum On"
             return

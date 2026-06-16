@@ -14,6 +14,7 @@ import UIKit
 final class ARMeasurementService: NSObject, ObservableObject {
     @Published var trackingStateText = "Move your phone"
     @Published var isARReady = false
+    @Published var sessionErrorMessage: String?
     @Published var distanceMeters: Double?
     @Published var isUsingFallbackMeasurement = true
 
@@ -30,19 +31,28 @@ final class ARMeasurementService: NSObject, ObservableObject {
         sceneView.session.delegate = self
         sceneView.automaticallyUpdatesLighting = true
         sceneView.autoenablesDefaultLighting = true
+        sceneView.scene = SCNScene()
     }
 
     func start() {
+        guard let sceneView else {
+            trackingStateText = "Camera view not ready"
+            isARReady = false
+            return
+        }
+
         guard !isSessionRunning else { return }
         guard ARWorldTrackingConfiguration.isSupported else {
             trackingStateText = "AR not supported"
             isARReady = false
+            sessionErrorMessage = "Perangkat ini belum mendukung ARKit world tracking."
             return
         }
 
         let configuration = ARWorldTrackingConfiguration()
         configuration.planeDetection = [.horizontal, .vertical]
-        sceneView?.session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
+        sessionErrorMessage = nil
+        sceneView.session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
         isSessionRunning = true
     }
 
@@ -221,6 +231,31 @@ final class ARMeasurementService: NSObject, ObservableObject {
 
 // MARK: - ARSessionDelegate
 extension ARMeasurementService: ARSessionDelegate {
+    nonisolated func session(_ session: ARSession, didFailWithError error: Error) {
+        Task { @MainActor in
+            self.isSessionRunning = false
+            self.isARReady = false
+            self.trackingStateText = "AR failed"
+            self.sessionErrorMessage = error.localizedDescription
+        }
+    }
+
+    nonisolated func sessionWasInterrupted(_ session: ARSession) {
+        Task { @MainActor in
+            self.isARReady = false
+            self.trackingStateText = "AR interrupted"
+            self.sessionErrorMessage = "Sesi kamera sedang terinterupsi. Coba buka ulang kamera."
+        }
+    }
+
+    nonisolated func sessionInterruptionEnded(_ session: ARSession) {
+        Task { @MainActor in
+            self.isSessionRunning = false
+            self.sessionErrorMessage = nil
+            self.start()
+        }
+    }
+
     nonisolated func session(_ session: ARSession, didUpdate frame: ARFrame) {
         let trackingDescription: String
         let isReady: Bool
@@ -246,6 +281,9 @@ extension ARMeasurementService: ARSessionDelegate {
         Task { @MainActor in
             self.trackingStateText = trackingDescription
             self.isARReady = isReady
+            if isReady {
+                self.sessionErrorMessage = nil
+            }
             self.focalLengthPixels = fx
             self.focalLengthYPixels = fy
             self.cameraImageResolution = imageRes
