@@ -12,34 +12,29 @@ struct CustomTabBar: View {
     let onCamera: () -> Void
 
     var body: some View {
-        HStack {
-            HStack(spacing: 4) {
-                TabBarItem(icon: "house.fill", label: "Home", isSelected: selectedTab == .home) {
-                    selectedTab = .home
-                }
-                TabBarItem(icon: "map.fill", label: "Maps", isSelected: selectedTab == .map) {
-                    selectedTab = .map
-                }
-                TabBarItem(icon: "fish.fill", label: "History", isSelected: selectedTab == .history) {
-                    selectedTab = .history
-                }
+        HStack(spacing: 4) {
+            TabBarItem(icon: "house.fill", label: "Home", isSelected: selectedTab == .home) {
+                selectedTab = .home
             }
-            .padding(6)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
-
-            Spacer()
-
-            Button(action: onCamera) {
-                Image(systemName: "camera.fill")
-                    .font(.title2)
-                    .frame(width: 52, height: 52)
-                    .background(.regularMaterial, in: Circle())
+            TabBarItem(icon: "map.fill", label: "Maps", isSelected: selectedTab == .map) {
+                selectedTab = .map
             }
-            .foregroundStyle(.primary)
+            TabBarItem(icon: "fish.fill", label: "History", isSelected: selectedTab == .history) {
+                selectedTab = .history
+            }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 8)
-        .background(.ultraThinMaterial)
+        .padding(6)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
+
+        Spacer()
+
+        Button(action: onCamera) {
+            Image(systemName: "camera.fill")
+                .font(.title2)
+                .frame(width: 56, height: 56)
+                .background(.regularMaterial, in: Circle())
+        }
+        .foregroundStyle(.primary)
     }
 }
 
@@ -66,6 +61,7 @@ struct TabBarItem: View {
                 in: RoundedRectangle(cornerRadius: 14)
             )
         }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
