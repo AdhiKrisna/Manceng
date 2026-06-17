@@ -44,16 +44,16 @@ struct HomeView: View {
 
                     VStack(spacing: 8) {
                         Text(latestCatch.species)
-                            .font(.Title1Semibold)
+                            .font(.title1Semibold)
                             .foregroundColor(.NeutralColorPrimaryBlack1)
 
                         HStack(spacing: 16) {
                             Text(String(format: "%.1f kg", latestCatch.weight))
-                                .font(.Caption1Bold)
+                                .font(.caption1Bold)
                                 .foregroundColor(.NeutralColorPrimaryBlack1.opacity(0.7))
 
                             Text(String(format: "%.0f cm", latestCatch.length))
-                                .font(.Caption1Bold)
+                                .font(.caption1Bold)
                                 .foregroundColor(.NeutralColorPrimaryBlack1.opacity(0.7))
                         }
                     }
@@ -98,11 +98,11 @@ struct HomeView: View {
 
                     VStack(spacing: 8) {
                         Text("No catches recorded yet!")
-                            .font(.Title1Semibold)
+                            .font(.title1Semibold)
                             .foregroundColor(.NeutralColorPrimaryBlack1)
 
                         Text("Tap camera button below to get started!")
-                            .font(.Caption1Bold)
+                            .font(.caption1Bold)
                             .foregroundColor(.NeutralColorPrimaryBlack1.opacity(0.7))
                             .multilineTextAlignment(.center)
                     }

@@ -61,7 +61,7 @@ struct HistoryView: View {
     private var header: some View {
         ZStack {
             Text("History")
-                .font(.Title1Semibold)
+                .font(.title1Semibold)
                 .foregroundStyle(Color.NeutralColorPrimaryBlack1)
 
             HStack {

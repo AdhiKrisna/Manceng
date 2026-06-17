@@ -34,7 +34,7 @@ struct SortButton: View {
                 }
             }
         } label: {
-            Image(systemName: "line.3.horizontal")
+            Image(systemName: "line.3.horizontal.decrease")
                 .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(.black)
                 .frame(width: 43, height: 43)
