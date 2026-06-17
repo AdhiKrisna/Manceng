@@ -9,25 +9,17 @@ import SwiftUI
 import SwiftData
 
 struct HistoryView: View {
-    enum SortOption: String, CaseIterable, Identifiable {
-        case latest = "Latest"
-        case weight = "Weight"
-        case length = "Length"
-        
-        var id: String { self.rawValue }
-    }
-
     @State private var selectedSort: SortOption = .latest
     @Query private var allCatches: [CatchModel]
 
     var sortedCatches: [CatchModel] {
         switch selectedSort {
         case .latest:
-            return allCatches.sorted(by: { $0.capturedAt > $1.capturedAt })
+            return allCatches.sorted { $0.capturedAt > $1.capturedAt }
         case .weight:
-            return allCatches.sorted(by: { $0.weight > $1.weight })
+            return allCatches.sorted { $0.weight > $1.weight }
         case .length:
-            return allCatches.sorted(by: { $0.length > $1.length })
+            return allCatches.sorted { $0.length > $1.length }
         }
     }
 
@@ -69,47 +61,23 @@ struct HistoryView: View {
     private var header: some View {
         ZStack {
             Text("History")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(.black)
+                .font(.Title1Semibold)
+                .foregroundStyle(Color.NeutralColorPrimaryBlack1)
 
             HStack {
                 Spacer()
-                sortMenu
+
+                SortButton(selectedSort: $selectedSort)
             }
         }
         .frame(height: 44)
-    }
-
-    private var sortMenu: some View {
-        Menu {
-            ForEach(SortOption.allCases) { option in
-                Button {
-                    selectedSort = option
-                } label: {
-                    HStack {
-                        Text(option.rawValue)
-                        if selectedSort == option {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                }
-            }
-        } label: {
-            Circle()
-                .fill(Color.white.opacity(0.5))
-                .frame(width: 36, height: 36)
-                .overlay {
-                    Image(systemName: "line.3.horizontal")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(.black)
-                }
-        }
     }
 
     private var emptyState: some View {
         VStack(spacing: 10) {
             Image(systemName: "fish.fill")
                 .font(.system(size: 44))
+
             Text("History masih kosong")
                 .font(.system(size: 16, weight: .semibold))
         }
@@ -124,7 +92,10 @@ struct HistoryView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(height: 100)
-                .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 10)
+                .shadow(color: .black.opacity(0.15),
+                        radius: 8,
+                        x: 0,
+                        y: 10)
 
             Text(item.species.uppercased())
                 .font(.system(size: 12, weight: .bold))
@@ -134,7 +105,7 @@ struct HistoryView: View {
                 .padding(.top, 8)
 
             Text(bottomText(for: item))
-                .font(.system(size: 10, weight: .regular))
+                .font(.system(size: 10))
                 .foregroundStyle(.black.opacity(0.58))
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
@@ -152,6 +123,10 @@ struct HistoryView: View {
             return String(format: "%.0f cm", item.length)
         }
     }
+}
+
+#Preview {
+    HistoryView()
 }
 
 #Preview {

@@ -45,7 +45,7 @@ struct MainView: View {
                     Color.clear
                         .tabItem { Label("Camera", systemImage: "camera.fill") }
                         .tag(Tab.camera)
-                }
+                }.tint(Color.NeutralColorPrimaryWhite)
                 .onChange(of: selectedTab) { old, new in
                     if new == .camera {
                         // Kembalikan seleksi tab ke tab sebelumnya agar posisi tidak stuck di tab kosong

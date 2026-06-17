@@ -1,8 +1,8 @@
 //
-//  CommonControls.swift
+//  GlassStyle.swift
 //  Manceng
 //
-//  Created by Codex on 15/06/26.
+//  Created by Krisna on 15/06/26.
 //
 
 import SwiftUI
@@ -74,4 +74,58 @@ struct ButtonOnboard: View {
         }
         .buttonStyle(GlassPressStyle())
     }
+}
+
+#Preview {
+    ButtonOnboard(
+        title: "Save",
+        action: {}
+    )
+}
+
+
+#Preview("Glass Press Style") {
+    Button("Tap Me") {
+        // Action kosong
+    }
+    .padding(.horizontal, 24)
+    .padding(.vertical, 12)
+    .glassStyle(Capsule())
+    .buttonStyle(GlassPressStyle())
+    .padding()
+}
+
+#Preview("Glass Style Modifier") {
+    VStack(spacing: 20) {
+        Text("Glass Card")
+            .padding()
+            .glassStyle(RoundedRectangle(cornerRadius: 20))
+
+        Text("Glass Capsule")
+            .padding(.horizontal, 24)
+            .padding(.vertical, 12)
+            .glassStyle(Capsule())
+    }
+    .padding()
+}
+
+#Preview("Glass Circle Icon") {
+    VStack(spacing: 20) {
+        GlassCircleIcon(systemName: "heart.fill")
+
+        GlassCircleIcon(
+            systemName: "camera.fill",
+            size: 64,
+            iconSize: 24,
+            iconColor: .blue
+        )
+
+        GlassCircleIcon(
+            systemName: "bookmark.fill",
+            size: 48,
+            iconSize: 18,
+            iconColor: .orange
+        )
+    }
+    .padding()
 }
