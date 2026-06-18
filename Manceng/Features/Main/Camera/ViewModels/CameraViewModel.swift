@@ -37,11 +37,29 @@ final class CameraViewModel: ObservableObject {
         arService.isARReady &&
         !isScanningFish &&
         !isCapturing &&
+        hasReliableFishMeasurement &&
         hasValidFishOrientation
     }
 
     var centerInstructionText: String {
-        "1 fish only\nHead must face left"
+        guard arService.isARReady else {
+            return arService.measurementGuidance
+        }
+
+        if segmentedFishes.count > 1 {
+            return "Only 1 fish can be scanned at a time"
+        }
+
+        guard hasReliableFishMeasurement else {
+            return "Show 1 fish clearly in view"
+        }
+
+        return "Keep the fish head on the left and tail on the right"
+    }
+
+    var focusedFishBoundingBox: CGRect? {
+        guard segmentedFishes.count == 1 else { return nil }
+        return segmentedFishes.first?.fish.boundingBox
     }
 
     var shouldShowPermissionAlert: Bool {
@@ -55,6 +73,15 @@ final class CameraViewModel: ObservableObject {
         }
 
         return FishMaskOrientationAnalyzer.isHeadLeftTailRight(maskImage: segmentedFish.maskImage)
+    }
+
+    private var hasReliableFishMeasurement: Bool {
+        guard segmentedFishes.count == 1,
+              let length = segmentedFishes.first?.fish.estimatedLengthCm else {
+            return false
+        }
+
+        return length.isFinite && length > 0
     }
 
     func prepareCameraPermission() async {

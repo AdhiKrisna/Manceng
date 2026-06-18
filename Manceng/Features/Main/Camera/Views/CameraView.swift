@@ -51,10 +51,21 @@ struct CameraView: View {
             .padding(.horizontal, 20)
 
             if viewModel.cameraPermissionState.canUseCamera,
-               viewModel.arService.isARReady,
                !shouldShowARCoaching,
                !showCameraGuide {
                 centerInstruction
+            }
+
+            if viewModel.cameraPermissionState.canUseCamera,
+               !shouldShowARCoaching,
+               !showCameraGuide,
+               let imageSize = viewModel.scannedImage?.size,
+               let boundingBox = viewModel.focusedFishBoundingBox {
+                FishScanCornerGuide(
+                    boundingBox: boundingBox,
+                    imageSize: imageSize
+                )
+                .allowsHitTesting(false)
             }
 
             if showCameraGuide, viewModel.cameraPermissionState.canUseCamera {
@@ -259,12 +270,13 @@ private struct ARCameraContainer: UIViewRepresentable {
     func makeUIView(context: Context) -> ARSCNView {
         let view = ARSCNView(frame: .zero)
         view.backgroundColor = .black
+        view.debugOptions = []
         service.attach(sceneView: view)
 
         let coachingOverlay = ARCoachingOverlayView()
         coachingOverlay.tag = Self.coachingOverlayTag
         coachingOverlay.session = view.session
-        coachingOverlay.goal = .tracking
+        coachingOverlay.goal = .anyPlane
         coachingOverlay.activatesAutomatically = false
         coachingOverlay.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(coachingOverlay)
@@ -288,6 +300,77 @@ private struct ARCameraContainer: UIViewRepresentable {
 
         coachingOverlay.isHidden = !isCoachingVisible
         coachingOverlay.setActive(isCoachingVisible, animated: true)
+    }
+}
+
+private struct FishScanCornerGuide: View {
+    let boundingBox: CGRect
+    let imageSize: CGSize
+    @State private var pulse = false
+
+    var body: some View {
+        GeometryReader { proxy in
+            let rect = displayRect(in: proxy.size)
+
+            Path { path in
+                addCornerLines(to: &path, rect: rect)
+            }
+            .trim(from: 0, to: pulse ? 1 : 0.82)
+            .stroke(
+                Color.white.opacity(0.9),
+                style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round)
+            )
+            .shadow(color: .black.opacity(0.35), radius: 5, x: 0, y: 2)
+            .scaleEffect(pulse ? 1.02 : 0.98, anchor: .center)
+            .animation(.easeInOut(duration: 0.72).repeatForever(autoreverses: true), value: pulse)
+            .onAppear { pulse = true }
+        }
+    }
+
+    private func displayRect(in displaySize: CGSize) -> CGRect {
+        guard imageSize.width > 0, imageSize.height > 0 else { return .zero }
+
+        let scale = max(displaySize.width / imageSize.width, displaySize.height / imageSize.height)
+        let width = imageSize.width * scale
+        let height = imageSize.height * scale
+        let imageFrame = CGRect(
+            x: (displaySize.width - width) / 2,
+            y: (displaySize.height - height) / 2,
+            width: width,
+            height: height
+        )
+
+        let minX = imageFrame.minX + boundingBox.minX * imageFrame.width
+        let maxX = imageFrame.minX + boundingBox.maxX * imageFrame.width
+        let minY = imageFrame.minY + (1 - boundingBox.maxY) * imageFrame.height
+        let maxY = imageFrame.minY + (1 - boundingBox.minY) * imageFrame.height
+
+        return CGRect(
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY
+        ).insetBy(dx: -10, dy: -10)
+    }
+
+    private func addCornerLines(to path: inout Path, rect: CGRect) {
+        let cornerLength = min(max(min(rect.width, rect.height) * 0.18, 18), 42)
+
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY + cornerLength))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.minX + cornerLength, y: rect.minY))
+
+        path.move(to: CGPoint(x: rect.maxX - cornerLength, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + cornerLength))
+
+        path.move(to: CGPoint(x: rect.maxX, y: rect.maxY - cornerLength))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.maxX - cornerLength, y: rect.maxY))
+
+        path.move(to: CGPoint(x: rect.minX + cornerLength, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - cornerLength))
     }
 }
 

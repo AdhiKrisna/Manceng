@@ -65,26 +65,19 @@ struct CameraGuideView: View {
         }
         .frame(height: onContinue == nil ? 440 : 500)
         .background(
-            ZStack {
-                LinearGradient.catchDetail
-                RadialGradient(
-                    colors: [Color.brandSky.opacity(0.35), .clear],
-                    center: .top,
-                    startRadius: 10,
-                    endRadius: 320
-                )
-            }
+            Color.black.opacity(0.08)
+                .background(.ultraThinMaterial.opacity(0.35))
         )
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(Color.brandSky.opacity(0.4), lineWidth: 1)
+                .stroke(Color.NeutralColorPrimaryWhite.opacity(0.4), lineWidth: 1)
         )
         .overlay(alignment: .topTrailing) {
             CircleIconButton(systemName: "xmark") { dismiss() }
                 .padding(10)
         }
-        .shadow(color: Color.brandSky.opacity(0.4), radius: 28, y: 12)
+        .shadow(color: Color.NeutralColorPrimaryWhite.opacity(0.4), radius: 28, y: 12)
     }
 
     private func pageView(_ item: GuidePage) -> some View {
@@ -93,7 +86,7 @@ struct CameraGuideView: View {
                 .font(.title2.bold())
                 .foregroundStyle(Color.brandWhite)
                 .multilineTextAlignment(.center)
-                .padding(.top, 44)
+                .padding(.top, 64)
                 .padding(.horizontal, 48)
 
             ZStack {
@@ -145,7 +138,7 @@ struct CameraGuideView: View {
         HStack(spacing: 8) {
             ForEach(pages.indices, id: \.self) { index in
                 Capsule()
-                    .fill(index == page ? Color.brandSky : Color.brandWhite.opacity(0.3))
+                    .fill(index == page ? Color.BrandColorPrimaryYellow : Color.brandWhite.opacity(0.3))
                     .frame(width: index == page ? 22 : 8, height: 8)
                     .onTapGesture {
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {

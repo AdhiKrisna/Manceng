@@ -67,17 +67,5 @@ extension Color {
         startPoint: .top,
         endPoint: .bottom
     )
-    
-
 }
 
-extension LinearGradient {
-    static let catchDetail = LinearGradient(
-        colors: [
-            Color.BrandColorPrimaryYellow,
-            Color(hex: "FFC400")
-        ],
-        startPoint: .top,
-        endPoint: .bottom
-    )
-}

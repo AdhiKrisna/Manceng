@@ -5,11 +5,13 @@
 //  Created by Made Vidyatma Adhi Krisna on 14/06/26.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct HistoryView: View {
     @State private var selectedSort: SortOption = .latest
+    @StateObject private var model3DMotion = Model3DMotionManager()
+    @State private var interaction = FishInteractionState()
     @Query private var allCatches: [CatchModel]
 
     private var sortedCatches: [CatchModel] {
@@ -26,37 +28,36 @@ struct HistoryView: View {
     private let columns = [
         GridItem(.flexible(), spacing: 18),
         GridItem(.flexible(), spacing: 18),
-        GridItem(.flexible(), spacing: 18)
+        GridItem(.flexible(), spacing: 18),
     ]
 
     var body: some View {
         let catches = sortedCatches
+        VStack {
+            header
+                .padding(.horizontal, 20)
+            Spacer()
+            if catches.isEmpty {
+                VStack {
+                    emptyState.padding(.bottom, 118)
 
-        ZStack {
-            Color.BrandColorPrimaryYellow
-                .ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                header
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 8)
-
-                if catches.isEmpty {
-                    emptyState
-                } else {
-                    ScrollView {
-                        LazyVGrid(columns: columns, spacing: 24) {
-                            ForEach(catches) { item in
-                                historyItem(item)
-                            }
-                        }
-                        .padding(.horizontal, 28)
-                        .padding(.bottom, 118)
-                    }
-                    .scrollIndicators(.hidden)
                 }
+            } else {
+                ScrollView {
+                    LazyVGrid(columns: columns, spacing: 24) {
+                        ForEach(catches) { item in
+                            historyItem(item)
+                        }
+                    }
+                    .padding(.horizontal, 28)
+                    .padding(.bottom, 118)
+                }
+                .scrollIndicators(.hidden)
             }
-        }
+            Spacer()
+
+        }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .background(Color.BrandColorPrimaryYellow)
     }
 
     private var header: some View {
@@ -75,16 +76,37 @@ struct HistoryView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "fish.fill")
-                .font(.system(size: 44))
+        VStack(spacing: 24) {
+            FishModelView(
+                motion: model3DMotion,
+                interaction: interaction,
+                extraYawDegrees: 90,
+                fillSize: 0.45,
+                allowZoom: false
+            )
+            .frame(height: 320)
+            .onAppear { model3DMotion.start() }
+            .onDisappear { model3DMotion.stop() }
 
-            Text("History masih kosong")
-                .font(.system(size: 16, weight: .semibold))
+            VStack(spacing: 8) {
+                Text("No catches recorded yet!")
+                    .font(.title1Semibold)
+                    .foregroundColor(.NeutralColorPrimaryBlack1)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+
+                Text("Tap camera button below to get started!")
+                    .font(.caption1Bold)
+                    .foregroundColor(.NeutralColorPrimaryBlack1.opacity(0.7))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.75)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: 340)
         }
-        .foregroundStyle(.black.opacity(0.62))
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.bottom, 90)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 24)
     }
 
     private func historyItem(_ item: CatchModel) -> some View {
@@ -93,10 +115,12 @@ struct HistoryView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(height: 100)
-                .shadow(color: .black.opacity(0.15),
-                        radius: 8,
-                        x: 0,
-                        y: 10)
+                .shadow(
+                    color: .black.opacity(0.15),
+                    radius: 8,
+                    x: 0,
+                    y: 10
+                )
 
             Text(item.species.uppercased())
                 .font(.system(size: 12, weight: .bold))
