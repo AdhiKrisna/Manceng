@@ -116,7 +116,7 @@ struct HomeView: View {
             // Judul nama ikan — sticky di atas.
             VStack {
                 Text(currentCatch?.species ?? "")
-                    .font(.Title1Bold)
+                    .font(.title1Bold)
                     .foregroundColor(.NeutralColorPrimaryBlack1)
                     .padding(.top, 8)
                 Spacer()
@@ -230,11 +230,11 @@ struct HomeView: View {
 
             VStack(spacing: 8) {
                 Text("No catches recorded yet!")
-                    .font(.Title1Semibold)
+                    .font(.title1Semibold)
                     .foregroundColor(.NeutralColorPrimaryBlack1)
 
                 Text("Tap camera button below to get started!")
-                    .font(.Caption1Bold)
+                    .font(.caption1Bold)
                     .foregroundColor(.NeutralColorPrimaryBlack1.opacity(0.7))
                     .multilineTextAlignment(.center)
             }

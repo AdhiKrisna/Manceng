@@ -39,7 +39,6 @@ struct HistoryView: View {
             VStack(spacing: 0) {
                 header
                     .padding(.horizontal, 20)
-                    .padding(.top, 10)
                     .padding(.bottom, 18)
 
                 if catches.isEmpty {

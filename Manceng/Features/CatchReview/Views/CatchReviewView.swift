@@ -36,6 +36,9 @@ struct CatchReviewView: View {
             segmentedFishes: segmentedFishes
         ))
         self.locationMetadata = locationMetadata
+        self.locationString = locationMetadata?.displayName
+        self.latitude = locationMetadata?.latitude
+        self.longitude = locationMetadata?.longitude
         self.onRetake = onRetake
         self.onSave = onSave
     }
@@ -69,7 +72,7 @@ struct CatchReviewView: View {
         }
         .fullScreenCover(isPresented: $showShareTemplate) {
             ShareTemplatesView(
-                fishImage: viewModel.maskedFishImage ?? viewModel.image ?? UIImage(),
+                fishImage: viewModel.savedFishImage ?? viewModel.image ?? UIImage(),
                 species: viewModel.fishName,
                 weight: viewModel.weightValue,
                 length: viewModel.lengthValue,
@@ -180,7 +183,7 @@ struct CatchReviewView: View {
     private func saveForShareIfNeeded() {
           guard !didSaveForShare else { return }
 
-          let image = viewModel.maskedFishImage ?? viewModel.image ?? UIImage()
+          let image = viewModel.savedFishImage ?? viewModel.image ?? UIImage()
           let imageData = image.pngData()
 
           var extractedLatitude = latitude
@@ -236,9 +239,7 @@ struct CatchReviewView: View {
     CatchReviewView(
         image: nil,
         segmentedFishes: [],
-        locationString: nil,
-        latitude: nil,
-        longitude: nil,
+        locationMetadata: nil,
         onRetake: {},
         onSave: { _ in }
     )

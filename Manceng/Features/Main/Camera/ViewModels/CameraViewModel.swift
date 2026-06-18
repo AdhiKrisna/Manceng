@@ -27,7 +27,7 @@ final class CameraViewModel: ObservableObject {
     let locationService = LocationService()
     private let cameraService = CameraService()
     private let permissionService = CameraPermissionService()
-    private let locationService = CatchLocationService()
+    private let catchLocationService = CatchLocationService()
     private let scanIntervalNanoseconds: UInt64 = 900_000_000
     private var scanningTask: Task<Void, Never>?
 
@@ -136,7 +136,7 @@ final class CameraViewModel: ObservableObject {
 
         isCapturing = true
         capturedImage = image
-        capturedLocation = await locationService.requestCurrentLocation()
+        capturedLocation = await catchLocationService.requestCurrentLocation()
         isCapturing = false
         errorMessage = nil
         showReview = true
