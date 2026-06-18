@@ -1,5 +1,4 @@
 import SwiftUI
-import SwiftData
 import UIKit
 
 struct MainView: View {
@@ -10,7 +9,6 @@ struct MainView: View {
     @State private var path = NavigationPath()
     @State private var walkthroughStep = 0
     @State private var showCameraSettingsAlert = false
-    @Environment(\.modelContext) private var modelContext
 
     enum Tab: Hashable {
         case home, map, history, camera
@@ -57,14 +55,7 @@ struct MainView: View {
                 .navigationDestination(for: Destination.self) { destination in
                     switch destination {
                     case .camera:
-                        CameraView { catchModel in
-                            modelContext.insert(catchModel)
-                            do {
-                                try modelContext.save()
-                            } catch {
-                                print("Failed to save catch: \(error)")
-                            }
-                            
+                        CameraView { _ in
                             selectedTab = .home
                             
                             if !path.isEmpty {

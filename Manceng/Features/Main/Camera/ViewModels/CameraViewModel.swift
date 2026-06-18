@@ -15,7 +15,9 @@ final class CameraViewModel: ObservableObject {
     @Published var segmentedFishes: [SegmentedFish] = []
     @Published var scannedImage: UIImage?
     @Published var capturedImage: UIImage?
+    @Published var capturedSegmentedFishes: [SegmentedFish] = []
     @Published var capturedLocation: CatchLocationMetadata?
+    @Published var shouldPromptLocationSettingsInReview = false
     @Published var showReview = false
     @Published var isScanningFish = false
     @Published var isCapturing = false
@@ -24,7 +26,6 @@ final class CameraViewModel: ObservableObject {
     private var isScanningPaused = false
 
     let arService = ARMeasurementService()
-    let locationService = LocationService()
     private let cameraService = CameraService()
     private let permissionService = CameraPermissionService()
     private let catchLocationService = CatchLocationService()
@@ -32,7 +33,11 @@ final class CameraViewModel: ObservableObject {
     private var scanningTask: Task<Void, Never>?
 
     var canCapture: Bool {
-        cameraPermissionState.canUseCamera && arService.isARReady && hasValidFishOrientation
+        cameraPermissionState.canUseCamera &&
+        arService.isARReady &&
+        !isScanningFish &&
+        !isCapturing &&
+        hasValidFishOrientation
     }
 
     var centerInstructionText: String {
@@ -121,11 +126,14 @@ final class CameraViewModel: ObservableObject {
             errorMessage = "AR belum On"
             return
         }
-        guard segmentedFishes.count == 1 else {
+        let lockedFishes = segmentedFishes
+
+        guard lockedFishes.count == 1 else {
             errorMessage = segmentedFishes.isEmpty ? "Ikan belum terdeteksi" : "Pastikan hanya ada 1 ikan"
             return
         }
-        guard hasValidFishOrientation else {
+        guard let lockedFish = lockedFishes.first,
+              FishMaskOrientationAnalyzer.isHeadLeftTailRight(maskImage: lockedFish.maskImage) else {
             errorMessage = "Arahkan kepala ikan ke kiri"
             return
         }
@@ -135,8 +143,11 @@ final class CameraViewModel: ObservableObject {
         }
 
         isCapturing = true
+        isScanningPaused = true
         capturedImage = image
+        capturedSegmentedFishes = lockedFishes
         capturedLocation = await catchLocationService.requestCurrentLocation()
+        shouldPromptLocationSettingsInReview = catchLocationService.isAuthorizationDenied
         isCapturing = false
         errorMessage = nil
         showReview = true
@@ -145,7 +156,10 @@ final class CameraViewModel: ObservableObject {
     func retry() {
         showReview = false
         capturedImage = nil
+        capturedSegmentedFishes = []
         capturedLocation = nil
+        shouldPromptLocationSettingsInReview = false
+        isScanningPaused = false
         isCapturing = false
         errorMessage = nil
     }
@@ -163,7 +177,6 @@ final class CameraViewModel: ObservableObject {
         }
 
         guard let image = arService.captureImage() else { return }
-        scannedImage = image
         isScanningFish = true
 
         let fishes = await segment(image: image)
@@ -178,6 +191,7 @@ final class CameraViewModel: ObservableObject {
             enriched[index].fish.species = "Catfish"
         }
 
+        scannedImage = image
         segmentedFishes = enriched
         isScanningFish = false
     }

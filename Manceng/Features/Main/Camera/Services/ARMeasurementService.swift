@@ -140,13 +140,6 @@ final class ARMeasurementService: NSObject, ObservableObject {
             return SIMD3<Float>(t.columns.3.x, t.columns.3.y, t.columns.3.z)
         }
 
-        // Strategy 3: hit test with feature points (legacy but useful fallback)
-        let hitResults = sceneView.hitTest(point, types: .featurePoint)
-        if let hit = hitResults.first {
-            let t = hit.worldTransform
-            return SIMD3<Float>(t.columns.3.x, t.columns.3.y, t.columns.3.z)
-        }
-
         return nil
     }
 

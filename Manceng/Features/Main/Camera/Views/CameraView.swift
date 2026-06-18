@@ -67,8 +67,9 @@ struct CameraView: View {
         .fullScreenCover(isPresented: $viewModel.showReview) {
             CatchReviewView(
                 image: viewModel.capturedImage,
-                segmentedFishes: viewModel.segmentedFishes,
+                segmentedFishes: viewModel.capturedSegmentedFishes,
                 locationMetadata: viewModel.capturedLocation,
+                shouldPromptLocationSettings: viewModel.shouldPromptLocationSettingsInReview,
                 onRetake: viewModel.retry,
                 onSave: onSave
             )
@@ -80,7 +81,6 @@ struct CameraView: View {
         }
         .task {
             await viewModel.prepareCameraPermission()
-            viewModel.locationService.requestAuthorization()
         }
         .task(id: viewModel.cameraPermissionState) {
             if viewModel.cameraPermissionState.canUseCamera {

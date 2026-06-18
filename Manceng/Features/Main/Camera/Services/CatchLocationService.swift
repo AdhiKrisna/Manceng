@@ -14,6 +14,10 @@ final class CatchLocationService: NSObject, CLLocationManagerDelegate {
     private let manager = CLLocationManager()
     private var continuation: CheckedContinuation<CatchLocationMetadata?, Never>?
 
+    var isAuthorizationDenied: Bool {
+        manager.authorizationStatus == .denied || manager.authorizationStatus == .restricted
+    }
+
     override init() {
         super.init()
         manager.delegate = self

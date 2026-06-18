@@ -66,9 +66,6 @@ struct ShareTemplatesView: View {
     }
     private func templateCarousel(height: CGFloat, screenWidth: CGFloat) -> some View {
         let cardSpacing: CGFloat = 0
-        let firstLeading: CGFloat = 8
-        let middleHorizontal: CGFloat = 12
-        let lastTrailing: CGFloat = 8
         let outerPeek: CGFloat = 44
 
         let cardWidth: CGFloat = screenWidth - 20 - outerPeek
