@@ -23,13 +23,14 @@ struct OnBoarding: View {
     
     var body: some View {
         VStack(spacing: 0) {
+            // Gambar full-width (edge-to-edge), scaledToFit agar utuh seperti desain.
             image
                 .resizable()
                 .scaledToFit()
-                .frame(maxWidth: .infinity, maxHeight: 248)
-            
-            Spacer().frame(height: 84)
-            
+                .frame(maxWidth: .infinity)
+
+            Spacer().frame(height: 48)
+
             if showDots {
                 HStack(spacing: 8) {
                     Circle()
@@ -42,22 +43,22 @@ struct OnBoarding: View {
                         .fill(Color.NeutralColorPrimaryBlack2)
                         .frame(width: 8, height: 8)
                 }
-                .padding(.bottom, 84)
+                .padding(.bottom, 48)
             }
-            
+
             VStack(spacing: 15) {
                 Text(title)
                     .font(.title1Semibold)
                     .foregroundColor(.NeutralColorPrimaryBlack1)
                     .multilineTextAlignment(.center)
-                
+
                 Text(caption)
                     .font(.caption1Bold)
                     .foregroundColor(.NeutralColorPrimaryBlack1)
                     .multilineTextAlignment(.center)
             }
+            .padding(.horizontal, 32)
         }
-        .padding(.horizontal, 32)
     }
 }
 

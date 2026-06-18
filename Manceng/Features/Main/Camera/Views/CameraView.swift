@@ -80,6 +80,8 @@ struct CameraView: View {
         }
         .task {
             await viewModel.prepareCameraPermission()
+            viewModel.locationService.requestAuthorization()
+            showGuide = viewModel.cameraPermissionState.canUseCamera
         }
         .task(id: viewModel.cameraPermissionState) {
             if viewModel.cameraPermissionState.canUseCamera {

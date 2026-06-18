@@ -4,85 +4,83 @@
 //
 //  Created by Raihan Zhaky Al Hafizh on 16/06/26.
 //
-//  Standard penggaris nyata:
-//  - 1 cm  : garis paling panjang
-//  - 0.5 cm: garis medium
-//  - 1 mm  : garis pendek
+//  Penggaris vertikal dinamis sesuai desain:
+//  - Angka paling atas = panjang ikan (maxCm), angka bawah = 0.
+//  - Tinggi tetap (mengisi layar); jarak antar-cm menyesuaikan panjang ikan,
+//    jadi ikan 40 cm tampil lebih renggang daripada 70 cm.
+//  - Tick per-cm: panjang tiap 10 cm, medium tiap 5 cm, pendek tiap 1 cm.
 //
 
 import SwiftUI
-import UIKit
-
-extension UIScreen {
-    static var pointsPerCm: CGFloat {
-        let ppi: CGFloat = 163.0 * UIScreen.main.nativeScale
-        let pixelsPerCm = ppi / 2.54
-        return pixelsPerCm / UIScreen.main.nativeScale
-    }
-}
 
 struct RulerView: View {
-    let totalCm: Int
-    let scaleFactor: CGFloat
+    let maxCm: Int
+    /// Jarak antar-cm KONSTAN (tidak ikut meregang mengikuti panjang ikan).
+    var cmSpacing: CGFloat
 
-    private let rulerWidth: CGFloat = 120
-    private let backgroundColor: Color = Color(red: 1.0, green: 0.80, blue: 0.0)
-    private let borderColor: Color = .black
+    private let tickAreaWidth: CGFloat = 58
     private let tickColor: Color = .black
 
-    var rulerHeight: CGFloat {
-        CGFloat(totalCm) * scaleFactor * UIScreen.pointsPerCm
+    init(maxCm: Int, cmSpacing: CGFloat = 8) {
+        self.maxCm = max(1, maxCm)
+        self.cmSpacing = cmSpacing
     }
 
-    private var tickCm: CGFloat { rulerWidth * 0.78 }
-    private var tickHalfCm: CGFloat { rulerWidth * 0.52 }
-    private var tickMm: CGFloat { rulerWidth * 0.30 }
-    private var totalTicks: Int { totalCm * 10 }
-
-    init(totalCm: Int = 10, scaleFactor: CGFloat = 10.0) {
-        self.totalCm = totalCm
-        self.scaleFactor = scaleFactor
-    }
+    private var tickHeight: CGFloat { CGFloat(maxCm) * cmSpacing }
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            backgroundColor
+        VStack(alignment: .leading, spacing: 6) {
+            // Label paling atas = panjang ikan.
+            label(maxCm, faded: false)
 
-            Rectangle()
-                .stroke(borderColor, lineWidth: 1)
-
+            // Area tick: 0 di bawah, maxCm di atas. Jarak antar-cm konstan.
             Canvas { context, size in
-                let spacing = size.height / CGFloat(totalTicks)
-
-                for i in 0...totalTicks {
-                    let y = CGFloat(i) * spacing
+                for cm in 0...maxCm {
+                    let y = CGFloat(maxCm - cm) * cmSpacing
 
                     let tickLen: CGFloat
-                    if i % 10 == 0 {
-                        tickLen = tickCm
-                    } else if i % 5 == 0 {
-                        tickLen = tickHalfCm
+                    let lineWidth: CGFloat
+                    if cm % 10 == 0 {
+                        tickLen = tickAreaWidth
+                        lineWidth = 1.6
+                    } else if cm % 5 == 0 {
+                        tickLen = tickAreaWidth * 0.62
+                        lineWidth = 1.2
                     } else {
-                        tickLen = tickMm
+                        tickLen = tickAreaWidth * 0.34
+                        lineWidth = 1.0
                     }
 
                     var path = Path()
                     path.move(to: CGPoint(x: 0, y: y))
                     path.addLine(to: CGPoint(x: tickLen, y: y))
-
-                    context.stroke(path, with: .color(tickColor), lineWidth: 1)
+                    context.stroke(path, with: .color(tickColor), lineWidth: lineWidth)
                 }
             }
+            .frame(width: tickAreaWidth, height: tickHeight)
+
+            // Label paling bawah = 0 (lebih pudar, seperti desain).
+            label(0, faded: true)
         }
-        .frame(width: rulerWidth, height: rulerHeight)
-        .clipShape(Rectangle())
+        .fixedSize()
+    }
+
+    private func label(_ value: Int, faded: Bool) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 3) {
+            Text("\(value)")
+                .font(.system(size: 30, weight: .bold))
+            Text("cm")
+                .font(.system(size: 13, weight: .semibold))
+        }
+        .foregroundStyle(Color.black.opacity(faded ? 0.45 : 1.0))
     }
 }
 
 #Preview {
-    ScrollView {
-        RulerView(totalCm: 1, scaleFactor: 1.0)
-            .padding()
-            .background(Color.gray.opacity(0.15))
+    HStack(spacing: 40) {
+        RulerView(maxCm: 70)
+        RulerView(maxCm: 40)
     }
+    .padding()
+    .background(Color(red: 1.0, green: 0.80, blue: 0.0))
 }

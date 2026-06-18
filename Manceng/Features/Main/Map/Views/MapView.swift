@@ -1,6 +1,16 @@
+
+//
+//  MainView.swift
+//  Manceng
+//
+//  Created by Made Vidyatma Adhi Krisna on 10/06/26.
+//
+
+import Foundation
 import MapKit
 import SwiftData
 import SwiftUI
+import MapKit
 
 struct MapView: View {
     @Query(sort: \CatchModel.capturedAt, order: .reverse) private var catches: [CatchModel]
@@ -13,6 +23,7 @@ struct MapView: View {
     }
 
     var body: some View {
+        Map(position: $cameraPosition) {
         Map(position: $cameraPosition) {
             ForEach(mappedCatches) { item in
                 if let latitude = item.latitude,
@@ -35,8 +46,8 @@ struct MapView: View {
                                 .padding(.vertical, 4)
                                 .background(.white.opacity(0.85), in: Capsule())
                         }
-                    }
                 }
+            }
             }
         }
         .mapControls {
@@ -53,9 +64,9 @@ struct MapView: View {
                 )
             }
         }
-    }
 }
 
 #Preview {
     MapView()
+        .modelContainer(for: CatchModel.self, inMemory: true)
 }

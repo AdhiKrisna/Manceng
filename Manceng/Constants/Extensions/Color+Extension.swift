@@ -49,6 +49,7 @@ extension Color {
     static let NeutralColorPrimaryBlack1 = Color(hex:"#000000")
     static let NeutralColorPrimaryBlack2 = Color(hex:"#000000").opacity(0.50)
     static let NeutralColorPrimaryWhite = Color(hex:"#FFFFFF")
+    static let NeutralColorPrimaryCream = Color(hex:"#FFE993")
 
     static let brandDark = Color(hex: "060659")
     static let brandBlue = Color(hex: "0053FF")

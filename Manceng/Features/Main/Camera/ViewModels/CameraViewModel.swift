@@ -24,6 +24,7 @@ final class CameraViewModel: ObservableObject {
     private var isScanningPaused = false
 
     let arService = ARMeasurementService()
+    let locationService = LocationService()
     private let cameraService = CameraService()
     private let permissionService = CameraPermissionService()
     private let locationService = CatchLocationService()
