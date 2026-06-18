@@ -12,7 +12,7 @@ struct HistoryView: View {
     @State private var selectedSort: SortOption = .latest
     @Query private var allCatches: [CatchModel]
 
-    var sortedCatches: [CatchModel] {
+    private var sortedCatches: [CatchModel] {
         switch selectedSort {
         case .latest:
             return allCatches.sorted { $0.capturedAt > $1.capturedAt }
@@ -23,13 +23,15 @@ struct HistoryView: View {
         }
     }
 
-    let columns = [
+    private let columns = [
         GridItem(.flexible(), spacing: 18),
         GridItem(.flexible(), spacing: 18),
         GridItem(.flexible(), spacing: 18)
     ]
 
     var body: some View {
+        let catches = sortedCatches
+
         ZStack {
             Color.BrandColorPrimaryYellow
                 .ignoresSafeArea()
@@ -40,12 +42,12 @@ struct HistoryView: View {
                     .padding(.top, 10)
                     .padding(.bottom, 18)
 
-                if sortedCatches.isEmpty {
+                if catches.isEmpty {
                     emptyState
                 } else {
                     ScrollView {
                         LazyVGrid(columns: columns, spacing: 24) {
-                            ForEach(sortedCatches) { item in
+                            ForEach(catches) { item in
                                 historyItem(item)
                             }
                         }
@@ -123,10 +125,6 @@ struct HistoryView: View {
             return String(format: "%.0f cm", item.length)
         }
     }
-}
-
-#Preview {
-    HistoryView()
 }
 
 #Preview {

@@ -10,6 +10,7 @@ import SwiftUI
 struct CatchReviewView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: CatchReviewViewModel
+    private let locationMetadata: CatchLocationMetadata?
 
     let onRetake: () -> Void
     let onSave: (CatchModel) -> Void
@@ -17,6 +18,7 @@ struct CatchReviewView: View {
     init(
         image: UIImage?,
         segmentedFishes: [SegmentedFish],
+        locationMetadata: CatchLocationMetadata? = nil,
         onRetake: @escaping () -> Void,
         onSave: @escaping (CatchModel) -> Void
     ) {
@@ -24,6 +26,7 @@ struct CatchReviewView: View {
             image: image,
             segmentedFishes: segmentedFishes
         ))
+        self.locationMetadata = locationMetadata
         self.onRetake = onRetake
         self.onSave = onSave
     }
@@ -79,7 +82,7 @@ struct CatchReviewView: View {
 
     private func fishPreview(height: CGFloat) -> some View {
         ZStack {
-            if let maskedImage = viewModel.maskedFishImage {
+            if let maskedImage = viewModel.reviewFishImage {
                 VStack(spacing: 0) {
                     Spacer(minLength: 0)
 
@@ -121,12 +124,12 @@ struct CatchReviewView: View {
             HStack(alignment: .top) {
                 field(label: "Weight", value: viewModel.weightText, unit: "kg", isSize: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
-//                Spacer() 
-                field(label: "Length", value: viewModel.lengthText,unit: "cm", isSize: true)
+
+                field(label: "Length", value: viewModel.lengthText, unit: "cm", isSize: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            field(label: "Location", value: "South China Sea")
+            field(label: "Location", value: locationDisplayText)
         }
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -137,8 +140,7 @@ struct CatchReviewView: View {
             Text(label)
                 .font(.captionFont)
                 .foregroundStyle(.black)
-            
-            // Menggunakan string interpolation langsung pada Text SwiftUI
+
             Text("\(Text(value).font(.title1Bold)) \(Text(unit ?? "").font(.kgcmFont))")
                 .foregroundStyle(.black)
                 .lineLimit(2)
@@ -154,15 +156,20 @@ struct CatchReviewView: View {
         }
     }
 
-    /// Bangun model `Catch` dari hasil review untuk ditampilkan sebagai card di beranda.
     private var savedCatch: CatchModel {
         CatchModel(
-            image: viewModel.maskedFishImage ?? viewModel.image ?? UIImage(),
+            image: viewModel.savedFishImage ?? viewModel.image ?? UIImage(),
             species: viewModel.fishName,
             weight: viewModel.weightValue,
             length: viewModel.lengthValue,
-            location: "South China Sea"
+            location: locationMetadata?.displayName,
+            latitude: locationMetadata?.latitude,
+            longitude: locationMetadata?.longitude
         )
+    }
+
+    private var locationDisplayText: String {
+        locationMetadata?.displayName ?? "Location unavailable"
     }
 }
 

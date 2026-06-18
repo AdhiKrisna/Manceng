@@ -25,8 +25,8 @@ struct CameraGuideView: View {
     }
 
     private let pages: [GuidePage] = [
-        GuidePage(title: "Capture only one fish", showsPhone: false),
-        GuidePage(title: "Move iPhone to start", showsPhone: true)
+        GuidePage(title: "You have to capture only one fish", showsPhone: false),
+        GuidePage(title: "Place your catch on a flat, even surface", showsPhone: true)
     ]
 
     var body: some View {

@@ -2,7 +2,7 @@
 //  CameraPermissionService.swift
 //  Manceng
 //
-//  Created by Codex on 15/06/26.
+//  Created by Made Vidyatma Adhi Krisna on 15/06/26.
 //
 
 import AVFoundation
