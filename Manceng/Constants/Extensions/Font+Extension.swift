@@ -16,4 +16,5 @@ extension Font {
     static let caption1Bold = Font.system(size: 22, weight: .bold, design: .serif)
     static let buttonFont = Font.system(size: 20, weight: .semibold, design: .rounded)
     static let captionFont = Font.system(size: 20, weight: .regular, design: .serif)
+    static let kgcmFont = Font.system(size: 17, weight: .bold, design: .serif)
 }

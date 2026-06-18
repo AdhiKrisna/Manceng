@@ -19,11 +19,11 @@ final class CatchReviewViewModel: ObservableObject {
     }
 
     var weightText: String {
-        String(format: "%.1f kg", weightValue)
+        String(format: "%.1f", weightValue)
     }
 
     var lengthText: String {
-        String(format: "%.0f cm", lengthValue)
+        String(format: "%.0f", lengthValue)
     }
 
     var primaryFish: DetectedFish? {

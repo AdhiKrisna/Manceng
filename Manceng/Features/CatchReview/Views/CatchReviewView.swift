@@ -118,10 +118,11 @@ struct CatchReviewView: View {
         VStack(alignment: .leading, spacing: 20) {
             field(label: "Fish Name", value: viewModel.fishName)
 
-            HStack(alignment: .top, spacing: 0) {
-                field(label: "Weight", value: viewModel.weightText)
+            HStack(alignment: .top) {
+                field(label: "Weight", value: viewModel.weightText, unit: "kg", isSize: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                field(label: "Length", value: viewModel.lengthText)
+//                Spacer() 
+                field(label: "Length", value: viewModel.lengthText,unit: "cm", isSize: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
@@ -131,16 +132,18 @@ struct CatchReviewView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func field(label: String, value: String) -> some View {
+    private func field(label: String, value: String, unit: String? = nil, isSize: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
                 .font(.captionFont)
                 .foregroundStyle(.black)
-            Text(value)
-                .font(.title1Bold)
+            
+            // Menggunakan string interpolation langsung pada Text SwiftUI
+            Text("\(Text(value).font(.title1Bold)) \(Text(unit ?? "").font(.kgcmFont))")
                 .foregroundStyle(.black)
                 .lineLimit(2)
                 .minimumScaleFactor(0.75)
+                .padding(.leading, isSize ? 30 : 0)
         }
     }
 
