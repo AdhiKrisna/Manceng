@@ -90,26 +90,16 @@ struct CameraGuideView: View {
                 .padding(.horizontal, 48)
 
             ZStack {
-                Image(systemName: "fish.fill")
-                    .resizable()
-                    .scaledToFit()
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [Color.neutralColorAccentOrange, Color.neutralColorPrimaryLemon],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(height: 170)
-                    .shadow(color: Color.neutralColorPrimaryWhite.opacity(0.6), radius: 18)
-                    .offset(y: fishBob)
-
                 if item.showsPhone {
-                    Image(systemName: "iphone.gen3")
-                        .font(.system(size: 70, weight: .regular))
-                        .foregroundStyle(Color.neutralColorPrimaryWhite)
-                        .shadow(color: .black.opacity(0.3), radius: 6, y: 3)
-                        .offset(x: -58 + phoneNudge, y: 40)
+                    GifImageView(name: "fishposition")
+                        .frame(width: 243, height: 97)
+                        .shadow(color: Color.neutralColorPrimaryWhite.opacity(0.6), radius: 18)
+                        .offset(y: fishBob)
+                } else {
+                    GifImageView(name: "onlyonefish")
+                        .frame(width: 243, height: 97)
+                        .shadow(color: Color.neutralColorPrimaryWhite.opacity(0.6), radius: 18)
+                        .offset(y: fishBob)
                 }
             }
 
