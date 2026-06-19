@@ -17,11 +17,13 @@ final class CatchReviewViewModel: ObservableObject {
     private let primaryFish: DetectedFish?
 
     var fishName: String {
-        "Catfish"
+        primaryFish?.species ?? "Unfortunately, we couldn't identify this fish"
     }
 
     var weightText: String {
-        String(format: "%.1f", weightValue)
+        weightValue < 1
+            ? String(format: "%.2f", weightValue)
+            : String(format: "%.1f", weightValue)
     }
 
     var lengthText: String {
@@ -33,7 +35,7 @@ final class CatchReviewViewModel: ObservableObject {
     }
 
     var weightValue: Double {
-        primaryFish?.estimatedWeightKg ?? 0.7
+        primaryFish?.estimatedWeightKg ?? 0
     }
 
     init(image: UIImage?, segmentedFishes: [SegmentedFish]) {

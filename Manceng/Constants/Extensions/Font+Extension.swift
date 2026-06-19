@@ -9,12 +9,12 @@
 import SwiftUI
 
 extension Font {
-    static let LargeTitleBlack = Font.system(size: 34, weight: .black, design: .serif)
-    static let Title1Bold = Font.system(size: 34, weight: .bold, design: .serif)
-    static let Title1Semibold = Font.system(size: 28, weight: .semibold, design: .serif)
-    static let Title2Bold = Font.system(size: 28, weight: .bold, design: .serif)
-    static let Caption1Bold = Font.system(size: 22, weight: .bold, design: .serif)
-    static let ButtonFont = Font.system(size: 20, weight: .semibold, design: .rounded)
-    static let CaptionRegular = Font.system(size: 15, weight: .regular, design: .serif)
-    static let kgcmFont = Font.system(size: 17, weight: .bold, design: .serif)
+    static let largeTitleBlack = Font.system(size: 34, weight: .black, design: .serif)
+    static let title1Bold = Font.system(size: 34, weight: .bold, design: .serif)
+    static let title1Semibold = Font.system(size: 28, weight: .semibold, design: .serif)
+    static let title2Bold = Font.system(size: 28, weight: .bold, design: .serif)
+    static let caption1Bold = Font.system(size: 22, weight: .bold, design: .serif)
+    static let buttonFont = Font.system(size: 20, weight: .semibold, design: .rounded)
+    static let captionRegular = Font.system(size: 15, weight: .regular, design: .serif)
+    static let kgCmFont = Font.system(size: 17, weight: .bold, design: .serif)
 }

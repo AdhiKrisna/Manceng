@@ -31,7 +31,7 @@ struct CameraGuideView: View {
 
     var body: some View {
         ZStack {
-            Color.black.opacity(0.5)
+            Color.neutralColorPrimaryBlack50
                 .ignoresSafeArea()
                 .onTapGesture { dismiss() }
 
@@ -65,26 +65,26 @@ struct CameraGuideView: View {
         }
         .frame(height: onContinue == nil ? 440 : 500)
         .background(
-            Color.black.opacity(0.08)
+            Color.black.opacity(0.6)
                 .background(.ultraThinMaterial.opacity(0.35))
         )
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(Color.NeutralColorPrimaryWhite.opacity(0.4), lineWidth: 1)
+                .stroke(Color.neutralColorPrimaryWhite.opacity(0.4), lineWidth: 1)
         )
         .overlay(alignment: .topTrailing) {
             CircleIconButton(systemName: "xmark") { dismiss() }
                 .padding(10)
         }
-        .shadow(color: Color.NeutralColorPrimaryWhite.opacity(0.4), radius: 28, y: 12)
+        .shadow(color: Color.neutralColorPrimaryWhite.opacity(0.4), radius: 28, y: 12)
     }
 
     private func pageView(_ item: GuidePage) -> some View {
         VStack(spacing: 28) {
             Text(item.title)
                 .font(.title2.bold())
-                .foregroundStyle(Color.brandWhite)
+                .foregroundStyle(Color.neutralColorPrimaryWhite)
                 .multilineTextAlignment(.center)
                 .padding(.top, 64)
                 .padding(.horizontal, 48)
@@ -95,19 +95,19 @@ struct CameraGuideView: View {
                     .scaledToFit()
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [Color.brandCyan, Color.brandSky],
+                            colors: [Color.neutralColorAccentOrange, Color.neutralColorPrimaryLemon],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
                     .frame(height: 170)
-                    .shadow(color: Color.brandSky.opacity(0.6), radius: 18)
+                    .shadow(color: Color.neutralColorPrimaryWhite.opacity(0.6), radius: 18)
                     .offset(y: fishBob)
 
                 if item.showsPhone {
                     Image(systemName: "iphone.gen3")
                         .font(.system(size: 70, weight: .regular))
-                        .foregroundStyle(Color.brandWhite)
+                        .foregroundStyle(Color.neutralColorPrimaryWhite)
                         .shadow(color: .black.opacity(0.3), radius: 6, y: 3)
                         .offset(x: -58 + phoneNudge, y: 40)
                 }
@@ -124,11 +124,11 @@ struct CameraGuideView: View {
             action()
         } label: {
             Text("Mulai Capture")
-                .font(.ButtonFont)
-                .foregroundStyle(Color.brandWhite)
+                .font(.buttonFont)
+                .foregroundStyle(Color.neutralColorPrimaryWhite)
                 .frame(maxWidth: .infinity)
                 .frame(height: 54)
-                .background(Color.brandBlue)
+                .background(Color.neutralColorPrimaryLemon)
                 .clipShape(RoundedRectangle(cornerRadius: Radius.borderRadius))
         }
         .buttonStyle(.plain)
@@ -137,19 +137,27 @@ struct CameraGuideView: View {
     private var dots: some View {
         HStack(spacing: 8) {
             ForEach(pages.indices, id: \.self) { index in
-                Capsule()
-                    .fill(index == page ? Color.BrandColorPrimaryYellow : Color.brandWhite.opacity(0.3))
-                    .frame(width: index == page ? 22 : 8, height: 8)
-                    .onTapGesture {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                            page = index
-                        }
-                    }
+                dotView(for: index)
             }
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: page)
     }
 
+    private func dotView(for index: Int) -> some View {
+        let isSelected = index == page
+        let color: Color = isSelected
+            ? Color.brandColorPrimaryYellow
+            : Color.neutralColorPrimaryWhite.opacity(0.3)
+
+        return Capsule()
+            .fill(color)
+            .frame(width: isSelected ? 22 : 8, height: 8)
+            .onTapGesture {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                    page = index
+                }
+            }
+    }
     // MARK: - Animations
 
     private func startAnimations() {

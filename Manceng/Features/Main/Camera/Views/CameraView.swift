@@ -16,7 +16,7 @@ struct CameraView: View {
     @State private var showCameraGuide = false
     @State private var shouldShowARCoaching = true
     @State private var arCoachingTask: Task<Void, Never>?
-
+    
     /// Dipanggil saat user menekan Save di review — hasil tangkapan dikirim ke beranda.
     var onSave: (CatchModel) -> Void = { _ in }
 
@@ -72,6 +72,11 @@ struct CameraView: View {
                 CameraGuideView(isPresented: $showCameraGuide)
                     .transition(.opacity)
             }
+
+            if viewModel.isCapturing {
+                captureLoadingOverlay
+                    .transition(.opacity)
+            }
         }
         .animation(.easeInOut(duration: 0.25), value: showCameraGuide)
         .navigationBarBackButtonHidden()
@@ -121,13 +126,13 @@ struct CameraView: View {
                 startARCoachingGate()
             }
         }
-        .alert("Permission kamera belum ada", isPresented: $viewModel.showPermissionAlert) {
+        .alert("Camera access needed", isPresented: $viewModel.showPermissionAlert) {
             Button("Settings") {
                 viewModel.openSettings()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Aktifkan akses Camera di Settings supaya fitur capture dan segmentation bisa dipakai.")
+            Text("Allow Camera access in Settings to use capture and fish segmentation.")
         }
     }
 
@@ -180,12 +185,8 @@ struct CameraView: View {
     }
 
     private var permissionBackground: some View {
-        LinearGradient(
-            colors: [Color.black, Color.brandBlue.opacity(0.92)],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-        .ignoresSafeArea()
+        Color.neutralColorPrimaryBlack1
+                .ignoresSafeArea()
     }
 
     private var permissionControls: some View {
@@ -204,24 +205,24 @@ struct CameraView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 28)
 
-            Button {
-                Task {
-                    if viewModel.cameraPermissionState == .notDetermined {
-                        await viewModel.requestCameraPermission()
-                    } else {
-                        viewModel.openSettings()
-                    }
-                }
-            } label: {
-                Text(viewModel.cameraPermissionState == .notDetermined ? "Allow Camera" : "Open Settings")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(.black)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background(.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 24)
+//            Button {
+//                Task {
+//                    if viewModel.cameraPermissionState == .notDetermined {
+//                        await viewModel.requestCameraPermission()
+//                    } else {
+//                        viewModel.openSettings()
+//                    }
+//                }
+//            } label: {
+//                Text(viewModel.cameraPermissionState == .notDetermined ? "Allow Camera" : "Open Settings")
+//                    .font(.system(size: 15, weight: .bold))
+//                    .foregroundStyle(.black)
+//                    .frame(maxWidth: .infinity)
+//                    .frame(height: 52)
+//                    .background(.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+//            }
+//            .buttonStyle(.plain)
+//            .padding(.horizontal, 24)
         }
     }
 
@@ -249,16 +250,32 @@ struct CameraView: View {
                     Circle()
                         .stroke(Color.white.opacity(0.82), lineWidth: 3)
                         .frame(width: 76, height: 76)
-
-                    if viewModel.isCapturing {
-                        ProgressView()
-                            .tint(.black)
-                    }
                 }
             }
             .buttonStyle(.plain)
             .disabled(!viewModel.canCapture || viewModel.isCapturing)
         }
+    }
+
+    private var captureLoadingOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.24)
+                .ignoresSafeArea()
+
+            VStack(spacing: 12) {
+                ProgressView()
+                    .tint(.white)
+                    .scaleEffect(1.25)
+
+                Text("Preparing catch review")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+            .padding(.horizontal, 22)
+            .padding(.vertical, 18)
+            .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+        .allowsHitTesting(true)
     }
 }
 

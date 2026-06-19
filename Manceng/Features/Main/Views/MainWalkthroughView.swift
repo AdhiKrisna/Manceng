@@ -47,7 +47,7 @@ struct MainWalkthroughView: View {
 
 #Preview {
     ZStack {
-        Color.BrandColorPrimaryYellow.ignoresSafeArea()
+        Color.brandColorPrimaryYellow.ignoresSafeArea()
         MainWalkthroughView(
             steps: [WalkthroughStep(text: "View your 5 latest, heaviest, or longest catches.")],
             currentStep: .constant(0),

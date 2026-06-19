@@ -40,32 +40,13 @@ extension Color {
         )
     }
 
-    static let BrandColorPrimaryYellow = Color(hex:"#FFCC00")
-    static let SurfaceColorPrimaryRed = Color(hex:"#FF0000")
-    static let NeutralColorPrimaryBrown1 = Color(hex:"#855A00").opacity(0.86)
-    static let NeutralColorSecondaryBrown2 = Color(hex:"#85A00").opacity(0.40)
-    static let NeutralColorPrimaryLemon = Color(hex:"#F9F799")
-    static let NeutralColorAccentOrange = Color(hex:"#FF9600")
-    static let NeutralColorPrimaryBlack1 = Color(hex:"#000000")
-    static let NeutralColorPrimaryBlack2 = Color(hex:"#000000").opacity(0.50)
-    static let NeutralColorPrimaryWhite = Color(hex:"#FFFFFF")
-    static let NeutralColorPrimaryCream = Color(hex:"#FFE993")
-
-    static let brandDark = Color(hex: "060659")
-    static let brandBlue = Color(hex: "0053FF")
-    static let brandCyan = Color(hex: "00C6FF")
-    static let brandBlack = Color(hex: "000000")
-    static let brandWhite = Color(hex: "FFFFFF")
-    static let brandNavy = Color(hex: "02022E")
-    static let brandSky = Color(hex: "0090DF")
-
-    static let catchDetailYellow = LinearGradient(
-        colors: [
-            Color.BrandColorPrimaryYellow,
-            Color(hex: "FFC400")
-        ],
-        startPoint: .top,
-        endPoint: .bottom
-    )
+    static let brandColorPrimaryYellow = Color(hex:"#FFCC00")
+    static let neutralColorPrimaryBrown1 = Color(hex:"#855A00").opacity(0.86)
+    static let neutralColorSecondaryBrown2 = Color(hex:"#85A00").opacity(0.40)
+    static let neutralColorPrimaryLemon = Color(hex:"#F9F799")
+    static let neutralColorAccentOrange = Color(hex:"#FF9600")
+    static let neutralColorPrimaryBlack1 = Color(hex:"#000000")
+    static let neutralColorPrimaryBlack50 = Color(hex:"#000000").opacity(0.50)
+    static let neutralColorPrimaryWhite = Color(hex:"#FFFFFF")
 }
 

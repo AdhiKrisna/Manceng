@@ -40,13 +40,13 @@ struct OnBoarding: View {
 
             VStack(spacing: 15) {
                 Text(title)
-                    .font(.Title1Semibold)
-                    .foregroundColor(.NeutralColorPrimaryBlack1)
+                    .font(.title1Semibold)
+                    .foregroundColor(.neutralColorPrimaryBlack1)
                     .multilineTextAlignment(.center)
 
                 Text(caption)
-                    .font(.CaptionRegular)
-                    .foregroundColor(.NeutralColorPrimaryBlack1)
+                    .font(.captionRegular)
+                    .foregroundColor(.neutralColorPrimaryBlack1)
                     .multilineTextAlignment(.center)
             }
             .padding(.horizontal, 32)

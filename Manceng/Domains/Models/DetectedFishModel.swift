@@ -15,5 +15,5 @@ struct DetectedFish: Identifiable {
     var estimatedLengthCm: Double?
     var estimatedWeightKg: Double?
     var species: String?
+    var speciesConfidence: Double?
 }
-

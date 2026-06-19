@@ -47,7 +47,7 @@ final class ARMeasurementService: NSObject, ObservableObject {
         guard ARWorldTrackingConfiguration.isSupported else {
             trackingStateText = "AR not supported"
             isARReady = false
-            sessionErrorMessage = "Perangkat ini belum mendukung ARKit world tracking."
+            sessionErrorMessage = "This device does not support ARKit world tracking."
             return
         }
 
@@ -267,7 +267,7 @@ extension ARMeasurementService: ARSessionDelegate {
         Task { @MainActor in
             self.isARReady = false
             self.trackingStateText = "AR interrupted"
-            self.sessionErrorMessage = "Sesi kamera sedang terinterupsi. Coba buka ulang kamera."
+            self.sessionErrorMessage = "The camera session was interrupted. Please reopen the camera."
         }
     }
 

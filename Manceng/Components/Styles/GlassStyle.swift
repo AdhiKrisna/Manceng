@@ -66,11 +66,11 @@ struct ButtonOnboard: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.ButtonFont)
-                .foregroundStyle(Color.brandWhite)
+                .font(.buttonFont)
+                .foregroundStyle(Color.neutralColorPrimaryWhite)
                 .frame(maxWidth: .infinity)
                 .frame(height: 58)
-                .background(Color.NeutralColorPrimaryBrown1, in: RoundedRectangle(cornerRadius: Radius.borderRadius))
+                .background(Color.neutralColorPrimaryBrown1, in: RoundedRectangle(cornerRadius: Radius.borderRadius))
         }
         .buttonStyle(GlassPressStyle())
     }

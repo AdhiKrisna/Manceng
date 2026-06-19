@@ -42,7 +42,7 @@ struct OnBoardingView: View {
                 }
             }
         }
-        .background(Color.BrandColorPrimaryYellow.ignoresSafeArea())
+        .background(Color.brandColorPrimaryYellow.ignoresSafeArea())
     }
 }
 

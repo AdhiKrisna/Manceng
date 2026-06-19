@@ -32,7 +32,7 @@ final class FishSegmentationService {
 
     func segment(image: UIImage, completion: @escaping ([SegmentedFish]) -> Void) {
         guard let model else {
-            print("[FishSegmentationService] best.mlpackage belum ter-load")
+            print("[FishSegmentationService] best.mlpackage is not loaded")
             completion([])
             return
         }
@@ -73,7 +73,7 @@ final class FishSegmentationService {
 
                 completion(self.decode(detections: detections, prototypes: prototypes, input: input))
             } catch {
-                print("[FishSegmentationService] Segmentasi gagal: \(error)")
+                print("[FishSegmentationService] Segmentation failed: \(error)")
                 completion([])
             }
         }
@@ -95,7 +95,7 @@ final class FishSegmentationService {
             return
         }
 
-        print("[FishSegmentationService] best.mlpackage/best.mlmodelc tidak ditemukan di bundle")
+        print("[FishSegmentationService] best.mlpackage/best.mlmodelc was not found in the app bundle")
     }
 
     private struct ModelInput {
@@ -232,7 +232,8 @@ final class FishSegmentationService {
                 confidence: confidence,
                 estimatedLengthCm: nil,
                 estimatedWeightKg: nil,
-                species: "Catfish"
+                species: nil,
+                speciesConfidence: nil
             )
             results.append(SegmentedFish(fish: fish, maskImage: maskImage))
         }
