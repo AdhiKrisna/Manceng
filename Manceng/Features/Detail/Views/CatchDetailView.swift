@@ -177,7 +177,7 @@ struct CatchDetailView: View {
     private func field(label: String, value: String, unit: String? = nil, isSize: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
-                .font(.caption1Bold)
+                .font(.captionRegular)
                 .foregroundStyle(.black)
 
             Text("\(Text(value).font(.title1Bold)) \(Text(unit ?? "").font(.kgCmFont))")

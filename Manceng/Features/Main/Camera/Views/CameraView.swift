@@ -72,11 +72,6 @@ struct CameraView: View {
                 CameraGuideView(isPresented: $showCameraGuide)
                     .transition(.opacity)
             }
-
-            if viewModel.isCapturing {
-                captureLoadingOverlay
-                    .transition(.opacity)
-            }
         }
         .animation(.easeInOut(duration: 0.25), value: showCameraGuide)
         .navigationBarBackButtonHidden()
@@ -133,6 +128,9 @@ struct CameraView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Allow Camera access in Settings to use capture and fish segmentation.")
+        }
+        .alert("Spesies ikan tidak diketahui", isPresented: $viewModel.showUnknownSpeciesAlert) {
+            Button("Oke", role: .cancel) {}
         }
     }
 
@@ -237,6 +235,11 @@ struct CameraView: View {
                     .background(.red.opacity(0.7), in: Capsule())
             }
 
+            if viewModel.isCapturing {
+                captureLoadingIndicator
+                    .transition(.opacity)
+            }
+
             Button {
                 Task {
                     await viewModel.capture()
@@ -257,25 +260,20 @@ struct CameraView: View {
         }
     }
 
-    private var captureLoadingOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.24)
-                .ignoresSafeArea()
+    private var captureLoadingIndicator: some View {
+        HStack(spacing: 10) {
+            ProgressView()
+                .tint(.white)
 
-            VStack(spacing: 12) {
-                ProgressView()
-                    .tint(.white)
-                    .scaleEffect(1.25)
-
-                Text("Preparing catch review")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.white)
-            }
-            .padding(.horizontal, 22)
-            .padding(.vertical, 18)
-            .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            Text("Analyzing your catch...")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
         }
-        .allowsHitTesting(true)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(.black.opacity(0.48), in: Capsule())
     }
 }
 
