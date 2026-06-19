@@ -23,6 +23,7 @@ final class CameraViewModel: ObservableObject {
     @Published var isCapturing = false
     @Published var errorMessage: String?
     @Published var showPermissionAlert = false
+    @Published var showUnknownSpeciesAlert = false
     private var isScanningPaused = false
 
     let arService = ARMeasurementService()
@@ -31,6 +32,7 @@ final class CameraViewModel: ObservableObject {
     private let catchLocationService = CatchLocationService()
     private let classificationService = FishClassificationService()
     private let weightEstimationService = FishWeightEstimationService()
+    private let minimumClassificationConfidence = 0.80
     private let scanIntervalNanoseconds: UInt64 = 900_000_000
     private var scanningTask: Task<Void, Never>?
 
@@ -166,6 +168,10 @@ final class CameraViewModel: ObservableObject {
             errorMessage = "Keep the fish head on the left"
             return
         }
+        guard (lockedFish.fish.speciesConfidence ?? 0) >= minimumClassificationConfidence else {
+            showUnknownSpeciesAlert = true
+            return
+        }
         guard let image = scannedImage else {
             errorMessage = "Camera is not ready yet"
             return
@@ -191,6 +197,7 @@ final class CameraViewModel: ObservableObject {
         isScanningPaused = false
         isCapturing = false
         errorMessage = nil
+        showUnknownSpeciesAlert = false
     }
 
     private func scanCurrentFrame() async {
