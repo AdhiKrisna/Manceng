@@ -164,10 +164,10 @@ struct CatchReviewView: View {
     private func field(label: String, value: String, unit: String? = nil, isSize: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
-                .font(.captionFont)
+                .font(.Caption1Bold)
                 .foregroundStyle(.black)
 
-            Text("\(Text(value).font(.title1Bold)) \(Text(unit ?? "").font(.kgcmFont))")
+            Text("\(Text(value).font(.Title1Bold)) \(Text(unit ?? "").font(.kgcmFont))")
                 .foregroundStyle(.black)
                 .lineLimit(2)
                 .minimumScaleFactor(0.75)

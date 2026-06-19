@@ -12,48 +12,40 @@ struct OnBoarding: View {
     let image: Image
     let title: String
     let caption: String
-    let showDots: Bool
+    let imageSize: CGSize?
     
-    init(image: Image, title: String, caption: String, showDots: Bool = false) {
+    init(image: Image, title: String, caption: String, imageSize: CGSize? = nil) {
         self.image = image
         self.title = title
         self.caption = caption
-        self.showDots = showDots
+        self.imageSize = imageSize
     }
     
     var body: some View {
         VStack(spacing: 0) {
             // Gambar full-width (edge-to-edge), scaledToFit agar utuh seperti desain.
-            image
-                .resizable()
-                .scaledToFit()
-                .frame(maxWidth: .infinity)
-
-            Spacer().frame(height: 48)
-
-            if showDots {
-                HStack(spacing: 8) {
-                    Circle()
-                        .fill(Color.NeutralColorPrimaryBlack2)
-                        .frame(width: 8, height: 8)
-                    Circle()
-                        .fill(Color.NeutralColorPrimaryBlack2)
-                        .frame(width: 8, height: 8)
-                    Circle()
-                        .fill(Color.NeutralColorPrimaryBlack2)
-                        .frame(width: 8, height: 8)
-                }
-                .padding(.bottom, 48)
+            if let size = imageSize {
+                image
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: size.width, height: size.height)
+            } else {
+                image
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity)
             }
+
+            Spacer().frame(height: 105)
 
             VStack(spacing: 15) {
                 Text(title)
-                    .font(.title1Semibold)
+                    .font(.Title1Semibold)
                     .foregroundColor(.NeutralColorPrimaryBlack1)
                     .multilineTextAlignment(.center)
 
                 Text(caption)
-                    .font(.caption1Bold)
+                    .font(.CaptionRegular)
                     .foregroundColor(.NeutralColorPrimaryBlack1)
                     .multilineTextAlignment(.center)
             }
@@ -65,9 +57,10 @@ struct OnBoarding: View {
 #Preview {
     Group {
         OnBoarding(
-            image: Image(systemName: "fish"),
+            image: Image("onboarding"),
             title: "FiShare",
-            caption: "Welcome Angler! identify your catch instantly with AR-powered camera technology. Fast, easy and fun."
+            caption: "Welcome Angler!\nidentify your catch instantly with AR-powered camera technology. Fast, easy and fun.",
+            imageSize: CGSize(width: 190.75, height: 202.87)
         )
     }
 }

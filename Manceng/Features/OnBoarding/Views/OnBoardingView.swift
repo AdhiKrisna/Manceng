@@ -20,17 +20,19 @@ struct OnBoardingView: View {
         VStack {
             TabView(selection: $currentPage) {
                 ForEach(data.indices, id: \.self) { index in
+                    let item = data[index]
                     OnBoarding(
-                        image: Image("onboarding")
-                            .resizable(),
-                        title: data[index].title,
-                        caption: data[index].caption,
-                        showDots: data[index].showDots
+                        image: Image(item.image),
+                        title: item.title,
+                        caption: item.caption,
+                        imageSize: item.image == "onboarding" ? CGSize(width: 190.75, height: 202.87) : nil
                     )
                     .tag(index)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
+            
+            Spacer().frame(height: 60)
             
             CustomButton(title: currentPage == data.count - 1 ? "Start" : "Next") {
                 if currentPage < data.count - 1 {
@@ -39,9 +41,8 @@ struct OnBoardingView: View {
                     onComplete()
                 }
             }
-            .padding(.bottom, 40)
         }
-        .background(Color.NeutralColorPrimaryCream.ignoresSafeArea())
+        .background(Color.BrandColorPrimaryYellow.ignoresSafeArea())
     }
 }
 

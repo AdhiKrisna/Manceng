@@ -6,6 +6,11 @@ import SwiftUI
 struct MapView: View {
     @Query(sort: \CatchModel.capturedAt, order: .reverse) private var catches: [CatchModel]
     @State private var cameraPosition: MapCameraPosition = .automatic
+    let onSelectCatch: (CatchModel) -> Void
+    
+    init(onSelectCatch: @escaping (CatchModel) -> Void) {
+        self.onSelectCatch = onSelectCatch
+    }
 
     private var mappedCatches: [CatchModel] {
         catches.filter { item in
@@ -22,20 +27,10 @@ struct MapView: View {
                         item.species,
                         coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
                     ) {
-                        VStack(spacing: 4) {
-                            Image(systemName: "fish.fill")
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundStyle(.white)
-                                .frame(width: 36, height: 36)
-                                .background(Color.brandBlue, in: Circle())
-
-                            Text(item.species)
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(.black)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(.white.opacity(0.85), in: Capsule())
-                        }
+                        PinMap(catchModel: item)
+                            .onTapGesture {
+                                onSelectCatch(item)
+                            }
                     }
                 }
             }
@@ -45,19 +40,18 @@ struct MapView: View {
             MapCompass()
             MapScaleView()
         }
-        .overlay {
-            if mappedCatches.isEmpty {
-                ContentUnavailableView(
-                    "No catch locations yet",
-                    systemImage: "map",
-                    description: Text("Saved catches with location access will appear here.")
-                )
+        .onAppear {
+            if let firstCatch = mappedCatches.first, let lat = firstCatch.latitude, let lon = firstCatch.longitude {
+                cameraPosition = .region(MKCoordinateRegion(
+                    center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
+                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                ))
             }
         }
     }
 }
 
 #Preview {
-    MapView()
+    MapView { _ in }
         .modelContainer(for: CatchModel.self, inMemory: true)
 }

@@ -14,14 +14,8 @@ import Combine
 struct HomeView: View {
     @Query(sort: \CatchModel.capturedAt, order: .reverse) private var catches: [CatchModel]
 
-    // Filter beranda (mengubah tampilan + urutan ikan).
-    enum HomeFilter: String, CaseIterable, Identifiable {
-        case latest = "Latest"
-        case weight = "Weight"
-        case length = "Length"
-        var id: String { rawValue }
-    }
-    @State private var selectedFilter: HomeFilter = .latest
+    // Sort option menggunakan component SortButton
+    @State private var selectedSort: SortOption = .latest
 
     // Gyro untuk memutar FOTO tangkapan (state terisi).
     @State private var rotationAngle: Angle = .zero
@@ -41,7 +35,7 @@ struct HomeView: View {
     /// Ikan yang ditampilkan, diurutkan sesuai filter, maksimal 5.
     private var displayedCatches: [CatchModel] {
         let sorted: [CatchModel]
-        switch selectedFilter {
+        switch selectedSort {
         case .latest: sorted = catches.sorted { $0.capturedAt > $1.capturedAt }
         case .weight: sorted = catches.sorted { $0.weight > $1.weight }
         case .length: sorted = catches.sorted { $0.length > $1.length }
@@ -50,8 +44,8 @@ struct HomeView: View {
     }
 
     // Latest → ruler + berat; Length → ruler saja; Weight → berat saja.
-    private var showRuler: Bool { selectedFilter != .weight }
-    private var showWeight: Bool { selectedFilter != .length }
+    private var showRuler: Bool { selectedSort != .weight }
+    private var showWeight: Bool { selectedSort != .length }
 
     var body: some View {
         ZStack {
@@ -66,12 +60,7 @@ struct HomeView: View {
         }
         .navigationDestination(isPresented: $showDetail) {
             if let c = detailCatch {
-                CatchDetailView(
-                    speciesName: c.species.uppercased(),
-                    length: String(format: "%.0f cm", c.length),
-                    weight: String(format: "%.1f Kg", c.weight),
-                    location: c.location ?? "-"
-                )
+                CatchDetailView(catchModel: c)
             } else {
                 CatchDetailView()
             }
@@ -116,7 +105,7 @@ struct HomeView: View {
             // Judul nama ikan — sticky di atas.
             VStack {
                 Text(currentCatch?.species ?? "")
-                    .font(.title1Bold)
+                    .font(.Title1Bold)
                     .foregroundColor(.NeutralColorPrimaryBlack1)
                     .padding(.top, 8)
                 Spacer()
@@ -124,7 +113,7 @@ struct HomeView: View {
             .allowsHitTesting(false)
         }
         .overlay(alignment: .topTrailing) {
-            filterButton
+            SortButton(selectedSort: $selectedSort)
                 .padding(.trailing, 20)
                 .padding(.top, 8)
         }
@@ -135,7 +124,7 @@ struct HomeView: View {
             }
         }
         .onDisappear { motionManager.stopGyroUpdates() }
-        .onChange(of: selectedFilter) { _, _ in
+        .onChange(of: selectedSort) { _, _ in
             currentCatchID = displayedCatches.first?.id
         }
     }
@@ -143,7 +132,13 @@ struct HomeView: View {
     // Carousel ikan: paging (center) + ikan tetangga tampil samar (preview).
     // `fishPeek` = seberapa banyak ikan berikutnya mengintip di tepi.
     //   Makin BESAR = ikan berikutnya makin dekat/terlihat. Makin KECIL = makin jauh.
-    private let fishPeek: CGFloat = 44
+    private var fishPeek: CGFloat {
+        if selectedSort == .latest {
+            return 0
+        } else {
+            return 130
+        }
+    }
 
     private var fishCarousel: some View {
         GeometryReader { geo in
@@ -164,8 +159,8 @@ struct HomeView: View {
                             .frame(width: itemWidth, height: geo.size.height)
                             .scrollTransition { content, phase in
                                 content
-                                    .opacity(phase.isIdentity ? 1 : 0.25)
-                                    .scaleEffect(phase.isIdentity ? 1 : 0.82)
+                                    .opacity(selectedSort != .latest ? (phase.isIdentity ? 1 : 0.6) : 1)
+                                    .scaleEffect(selectedSort != .latest ? (phase.isIdentity ? 1 : 0.82) : 1)
                             }
                             .contentShape(Rectangle())
                             .onTapGesture {
@@ -181,23 +176,6 @@ struct HomeView: View {
             .scrollTargetBehavior(.viewAligned)
             .scrollPosition(id: $currentCatchID)
             .scrollIndicators(.hidden)
-        }
-    }
-
-    // Tombol filter Liquid Glass + menu pilihan.
-    private var filterButton: some View {
-        Menu {
-            Picker("Filter", selection: $selectedFilter) {
-                ForEach(HomeFilter.allCases) { filter in
-                    Text(filter.rawValue).tag(filter)
-                }
-            }
-        } label: {
-            Image(systemName: "line.3.horizontal")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(Color.NeutralColorPrimaryBlack1)
-                .frame(width: 44, height: 44)
-                .glassEffect(.regular.interactive(), in: Circle())
         }
     }
 
@@ -230,11 +208,11 @@ struct HomeView: View {
 
             VStack(spacing: 8) {
                 Text("No catches recorded yet!")
-                    .font(.title1Semibold)
+                    .font(.Title1Semibold)
                     .foregroundColor(.NeutralColorPrimaryBlack1)
 
                 Text("Tap camera button below to get started!")
-                    .font(.caption1Bold)
+                    .font(.Caption1Bold)
                     .foregroundColor(.NeutralColorPrimaryBlack1.opacity(0.7))
                     .multilineTextAlignment(.center)
             }
