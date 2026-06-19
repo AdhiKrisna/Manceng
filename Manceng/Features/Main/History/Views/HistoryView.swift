@@ -5,117 +5,108 @@
 //  Created by Made Vidyatma Adhi Krisna on 14/06/26.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct HistoryView: View {
-    enum SortOption: String, CaseIterable, Identifiable {
-        case latest = "Latest"
-        case weight = "Weight"
-        case length = "Length"
-        
-        var id: String { self.rawValue }
-    }
-
     @State private var selectedSort: SortOption = .latest
+    @StateObject private var model3DMotion = Model3DMotionManager()
+    @State private var interaction = FishInteractionState()
     @Query private var allCatches: [CatchModel]
 
-    var sortedCatches: [CatchModel] {
+    private var sortedCatches: [CatchModel] {
         switch selectedSort {
         case .latest:
-            return allCatches.sorted(by: { $0.capturedAt > $1.capturedAt })
+            return allCatches.sorted { $0.capturedAt > $1.capturedAt }
         case .weight:
-            return allCatches.sorted(by: { $0.weight > $1.weight })
+            return allCatches.sorted { $0.weight > $1.weight }
         case .length:
-            return allCatches.sorted(by: { $0.length > $1.length })
+            return allCatches.sorted { $0.length > $1.length }
         }
     }
 
-    let columns = [
+    private let columns = [
         GridItem(.flexible(), spacing: 18),
         GridItem(.flexible(), spacing: 18),
-        GridItem(.flexible(), spacing: 18)
+        GridItem(.flexible(), spacing: 18),
     ]
 
     var body: some View {
-        ZStack {
-            Color.BrandColorPrimaryYellow
-                .ignoresSafeArea()
+        let catches = sortedCatches
+        VStack {
+            header
+                .padding(.horizontal, 20)
+            Spacer()
+            if catches.isEmpty {
+                VStack {
+                    emptyState.padding(.bottom, 118)
 
-            VStack(spacing: 0) {
-                header
-                    .padding(.horizontal, 20)
-                    .padding(.top, 10)
-                    .padding(.bottom, 18)
-
-                if sortedCatches.isEmpty {
-                    emptyState
-                } else {
-                    ScrollView {
-                        LazyVGrid(columns: columns, spacing: 24) {
-                            ForEach(sortedCatches) { item in
-                                historyItem(item)
-                            }
-                        }
-                        .padding(.horizontal, 28)
-                        .padding(.bottom, 118)
-                    }
-                    .scrollIndicators(.hidden)
                 }
+            } else {
+                ScrollView {
+                    LazyVGrid(columns: columns, spacing: 24) {
+                        ForEach(catches) { item in
+                            historyItem(item)
+                        }
+                    }
+                    .padding(.horizontal, 28)
+                    .padding(.bottom, 118)
+                }
+                .scrollIndicators(.hidden)
             }
-        }
+            Spacer()
+
+        }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .background(Color.BrandColorPrimaryYellow)
     }
 
     private var header: some View {
         ZStack {
             Text("History")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(.black)
+                .font(.title1Semibold)
+                .foregroundStyle(Color.NeutralColorPrimaryBlack1)
 
             HStack {
                 Spacer()
-                sortMenu
-            }
-        }
-        .frame(height: 44)
-    }
 
-    private var sortMenu: some View {
-        Menu {
-            ForEach(SortOption.allCases) { option in
-                Button {
-                    selectedSort = option
-                } label: {
-                    HStack {
-                        Text(option.rawValue)
-                        if selectedSort == option {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                }
+                SortButton(selectedSort: $selectedSort)
             }
-        } label: {
-            Circle()
-                .fill(Color.white.opacity(0.5))
-                .frame(width: 36, height: 36)
-                .overlay {
-                    Image(systemName: "line.3.horizontal")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(.black)
-                }
         }
+        .frame(height: 40)
     }
 
     private var emptyState: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "fish.fill")
-                .font(.system(size: 44))
-            Text("History masih kosong")
-                .font(.system(size: 16, weight: .semibold))
+        VStack(spacing: 24) {
+            FishModelView(
+                motion: model3DMotion,
+                interaction: interaction,
+                extraYawDegrees: 90,
+                fillSize: 0.45,
+                allowZoom: false
+            )
+            .frame(height: 320)
+            .onAppear { model3DMotion.start() }
+            .onDisappear { model3DMotion.stop() }
+
+            VStack(spacing: 8) {
+                Text("No catches recorded yet!")
+                    .font(.title1Semibold)
+                    .foregroundColor(.NeutralColorPrimaryBlack1)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+
+                Text("Tap camera button below to get started!")
+                    .font(.caption1Bold)
+                    .foregroundColor(.NeutralColorPrimaryBlack1.opacity(0.7))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.75)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: 340)
         }
-        .foregroundStyle(.black.opacity(0.62))
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.bottom, 90)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 24)
     }
 
     private func historyItem(_ item: CatchModel) -> some View {
@@ -124,7 +115,12 @@ struct HistoryView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(height: 100)
-                .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 10)
+                .shadow(
+                    color: .black.opacity(0.15),
+                    radius: 8,
+                    x: 0,
+                    y: 10
+                )
 
             Text(item.species.uppercased())
                 .font(.system(size: 12, weight: .bold))
@@ -134,7 +130,7 @@ struct HistoryView: View {
                 .padding(.top, 8)
 
             Text(bottomText(for: item))
-                .font(.system(size: 10, weight: .regular))
+                .font(.system(size: 10))
                 .foregroundStyle(.black.opacity(0.58))
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)

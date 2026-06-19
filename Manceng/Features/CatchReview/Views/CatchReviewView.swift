@@ -1,34 +1,32 @@
 //
 //  CatchReviewView.swift
-//  manceeng
+//  Manceng
 //
 //  Created by Made Vidyatma Adhi Krisna on 15/06/26.
 //
 
 import SwiftUI
-import CoreLocation
 import SwiftData
+import UIKit
 
 struct CatchReviewView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @StateObject private var viewModel: CatchReviewViewModel
+    private let locationMetadata: CatchLocationMetadata?
     @State private var showShareTemplate = false
-    @State private var didSave = false
-    @State private var didSaveForShare = false
+    @State private var savedCatchModel: CatchModel?
+    @State private var showLocationSettingsAlert = false
 
-    let locationString: String?
-    let latitude: Double?
-    let longitude: Double?
+    let shouldPromptLocationSettings: Bool
     let onRetake: () -> Void
     let onSave: (CatchModel) -> Void
 
     init(
         image: UIImage?,
         segmentedFishes: [SegmentedFish],
-        locationString: String?,
-        latitude: Double?,
-        longitude: Double?,
+        locationMetadata: CatchLocationMetadata? = nil,
+        shouldPromptLocationSettings: Bool = false,
         onRetake: @escaping () -> Void,
         onSave: @escaping (CatchModel) -> Void
     ) {
@@ -36,9 +34,8 @@ struct CatchReviewView: View {
             image: image,
             segmentedFishes: segmentedFishes
         ))
-        self.locationString = locationString
-        self.latitude = latitude
-        self.longitude = longitude
+        self.locationMetadata = locationMetadata
+        self.shouldPromptLocationSettings = shouldPromptLocationSettings
         self.onRetake = onRetake
         self.onSave = onSave
     }
@@ -72,12 +69,23 @@ struct CatchReviewView: View {
         }
         .fullScreenCover(isPresented: $showShareTemplate) {
             ShareTemplatesView(
-                fishImage: viewModel.maskedFishImage ?? viewModel.image ?? UIImage(),
+                fishImage: viewModel.savedFishImage ?? viewModel.image ?? UIImage(),
                 species: viewModel.fishName,
                 weight: viewModel.weightValue,
                 length: viewModel.lengthValue,
-                location: locationString
+                location: locationDisplayText
             )
+        }
+        .onAppear {
+            showLocationSettingsAlert = shouldPromptLocationSettings
+        }
+        .alert("Location access unavailable", isPresented: $showLocationSettingsAlert) {
+            Button("Settings") {
+                openSettings()
+            }
+            Button("Save as Unknown", role: .cancel) {}
+        } message: {
+            Text("Aktifkan akses Location di Settings kalau ingin menyimpan titik lokasi tangkapan. Jika tidak, lokasi akan disimpan sebagai Unknown.")
         }
     }
 
@@ -88,8 +96,9 @@ struct CatchReviewView: View {
             Spacer()
 
             CircleIconButton(systemName: "square.and.arrow.up") {
-                saveForShareIfNeeded()
-                showShareTemplate = true
+                if persistCatchIfNeeded() != nil {
+                    showShareTemplate = true
+                }
             }
             
         }
@@ -99,7 +108,7 @@ struct CatchReviewView: View {
 
     private func fishPreview(height: CGFloat) -> some View {
         ZStack {
-            if let maskedImage = viewModel.maskedFishImage {
+            if let maskedImage = viewModel.reviewFishImage {
                 VStack(spacing: 0) {
                     Spacer(minLength: 0)
 
@@ -138,105 +147,84 @@ struct CatchReviewView: View {
         VStack(alignment: .leading, spacing: 20) {
             field(label: "Fish Name", value: viewModel.fishName)
 
-            HStack(alignment: .top, spacing: 0) {
-                field(label: "Weight", value: viewModel.weightText)
+            HStack(alignment: .top) {
+                field(label: "Weight", value: viewModel.weightText, unit: "kg", isSize: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                field(label: "Length", value: viewModel.lengthText)
+
+                field(label: "Length", value: viewModel.lengthText, unit: "cm", isSize: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            field(label: "Location", value: locationString ?? "South China Sea")
+            field(label: "Location", value: locationDisplayText)
         }
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func field(label: String, value: String) -> some View {
+    private func field(label: String, value: String, unit: String? = nil, isSize: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
-                .font(.system(size: 20, weight: .regular))
+                .font(.captionFont)
                 .foregroundStyle(.black)
-            Text(value)
-                .font(.system(size: 32, weight: .bold))
+
+            Text("\(Text(value).font(.title1Bold)) \(Text(unit ?? "").font(.kgcmFont))")
                 .foregroundStyle(.black)
                 .lineLimit(2)
                 .minimumScaleFactor(0.75)
+                .padding(.leading, isSize ? 30 : 0)
         }
     }
 
     private var saveButton: some View {
         ButtonOnboard(title: "Save") {
-            persistCatchIfNeeded()
-            dismiss()
+            if let catchModel = persistCatchIfNeeded() {
+                onSave(catchModel)
+                dismiss()
+            }
         }
     }
 
-    private func persistCatchIfNeeded() {
-        guard !didSave else { return }
-        onSave(savedCatch)
-        didSave = true
-    }
-
-    
-    private func saveForShareIfNeeded() {
-          guard !didSaveForShare else { return }
-
-          let image = viewModel.maskedFishImage ?? viewModel.image ?? UIImage()
-          let imageData = image.pngData()
-
-          var extractedLatitude = latitude
-          var extractedLongitude = longitude
-
-          if let data = imageData,
-             let coordinate = ImageLocationHelper.extractLocation(from: data) {
-              extractedLatitude = coordinate.latitude
-              extractedLongitude = coordinate.longitude
-          }
-
-          let catchModel = CatchModel(
-              image: image,
-              imageData: imageData,
-              species: viewModel.fishName,
-              weight: viewModel.weightValue,
-              length: viewModel.lengthValue,
-              location: locationString ?? "South China Sea",
-              latitude: extractedLatitude,
-              longitude: extractedLongitude,
-              capturedAt: Date()
-          )
-
-          modelContext.insert(catchModel)
-
-          do {
-              try modelContext.save()
-              didSaveForShare = true
-          } catch {
-              print("Failed to save catch for share: \(error.localizedDescription)")
-          }
-      }
-    
-    /// Bangun model `Catch` dari hasil review untuk ditampilkan sebagai card di beranda.
-    private var savedCatch: CatchModel {
-        let image = viewModel.maskedFishImage ?? viewModel.image ?? UIImage()
-        let imageData = image.pngData()
-        var extractedLatitude: Double? = latitude
-        var extractedLongitude: Double? = longitude
-        
-        if let data = imageData,
-           let coordinate = ImageLocationHelper.extractLocation(from: data) {
-            extractedLatitude = coordinate.latitude
-            extractedLongitude = coordinate.longitude
+    private func persistCatchIfNeeded() -> CatchModel? {
+        if let savedCatchModel {
+            return savedCatchModel
         }
-        
-        return CatchModel(
-            image: image,
+
+        let catchModel = makeCatchModel()
+        modelContext.insert(catchModel)
+
+        do {
+            try modelContext.save()
+            savedCatchModel = catchModel
+            return catchModel
+        } catch {
+            print("Failed to save catch: \(error.localizedDescription)")
+            return nil
+        }
+    }
+    
+    private func makeCatchModel() -> CatchModel {
+        CatchModel(
+            image: viewModel.savedFishImage ?? viewModel.image ?? UIImage(),
             species: viewModel.fishName,
             weight: viewModel.weightValue,
             length: viewModel.lengthValue,
-            location: locationString ?? "South China Sea",
-            latitude: extractedLatitude,
-            longitude: extractedLongitude
+            location: locationDisplayText,
+            latitude: locationMetadata?.latitude,
+            longitude: locationMetadata?.longitude
         )
+    }
+
+    private var locationDisplayText: String {
+        locationMetadata?.displayName ?? "Unknown"
+    }
+
+    private func openSettings() {
+        guard let settingsURL = URL(string: UIApplication.openSettingsURLString),
+              UIApplication.shared.canOpenURL(settingsURL) else {
+            return
+        }
+
+        UIApplication.shared.open(settingsURL)
     }
 }
 
@@ -244,9 +232,7 @@ struct CatchReviewView: View {
     CatchReviewView(
         image: nil,
         segmentedFishes: [],
-        locationString: nil,
-        latitude: nil,
-        longitude: nil,
+        locationMetadata: nil,
         onRetake: {},
         onSave: { _ in }
     )

@@ -13,7 +13,7 @@ final class FishSegmentationService {
     private let modelSize = 640
     private let maskSize = 160
     private let maskChannels = 32
-    private let confidenceThreshold: Float = 0.5
+    private let confidenceThreshold: Float = 0.3
     private let maskThreshold: Float = 0.5
 
     private let colX1 = 0

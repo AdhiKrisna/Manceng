@@ -12,9 +12,10 @@ struct CameraView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var viewModel = CameraViewModel()
-    /// Tampil otomatis saat masuk layar kamera (kamera sudah jalan di belakang),
-    /// lalu bisa dibuka lagi lewat tombol info.
-    @State private var showGuide = true
+    @AppStorage("hasSeenCameraGuide") private var hasSeenCameraGuide = false
+    @State private var showCameraGuide = false
+    @State private var shouldShowARCoaching = true
+    @State private var arCoachingTask: Task<Void, Never>?
 
     /// Dipanggil saat user menekan Save di review — hasil tangkapan dikirim ke beranda.
     var onSave: (CatchModel) -> Void = { _ in }
@@ -22,7 +23,10 @@ struct CameraView: View {
     var body: some View {
         ZStack {
             if viewModel.cameraPermissionState.canUseCamera {
-                ARCameraContainer(service: viewModel.arService)
+                ARCameraContainer(
+                    service: viewModel.arService,
+                    isCoachingVisible: shouldShowARCoaching && !showCameraGuide
+                )
                     .ignoresSafeArea()
 
                 Color.black.opacity(0.18)
@@ -36,7 +40,6 @@ struct CameraView: View {
                 topControls
 
                 if viewModel.cameraPermissionState.canUseCamera {
-                    checkingStatus
                     Spacer()
                     bottomControls
                 } else {
@@ -47,40 +50,59 @@ struct CameraView: View {
             }
             .padding(.horizontal, 20)
 
-            if showGuide, viewModel.cameraPermissionState.canUseCamera {
-                CameraGuideView(isPresented: $showGuide)
+            if viewModel.cameraPermissionState.canUseCamera,
+               !shouldShowARCoaching,
+               !showCameraGuide {
+                centerInstruction
+            }
+
+            if viewModel.cameraPermissionState.canUseCamera,
+               !shouldShowARCoaching,
+               !showCameraGuide,
+               let imageSize = viewModel.scannedImage?.size,
+               let boundingBox = viewModel.focusedFishBoundingBox {
+                FishScanCornerGuide(
+                    boundingBox: boundingBox,
+                    imageSize: imageSize
+                )
+                .allowsHitTesting(false)
+            }
+
+            if showCameraGuide, viewModel.cameraPermissionState.canUseCamera {
+                CameraGuideView(isPresented: $showCameraGuide)
                     .transition(.opacity)
             }
         }
-        .animation(.easeInOut(duration: 0.25), value: showGuide)
+        .animation(.easeInOut(duration: 0.25), value: showCameraGuide)
         .navigationBarBackButtonHidden()
         .fullScreenCover(isPresented: $viewModel.showReview) {
             CatchReviewView(
                 image: viewModel.capturedImage,
-                segmentedFishes: viewModel.segmentedFishes,
-                locationString: viewModel.locationService.locationString,
-                latitude: viewModel.locationService.currentLocation?.latitude,
-                longitude: viewModel.locationService.currentLocation?.longitude,
+                segmentedFishes: viewModel.capturedSegmentedFishes,
+                locationMetadata: viewModel.capturedLocation,
+                shouldPromptLocationSettings: viewModel.shouldPromptLocationSettingsInReview,
                 onRetake: viewModel.retry,
                 onSave: onSave
             )
         }
         .onDisappear {
+            arCoachingTask?.cancel()
             viewModel.stopScanning()
             viewModel.arService.stop()
         }
         .task {
             await viewModel.prepareCameraPermission()
-            viewModel.locationService.requestAuthorization()
-            showGuide = viewModel.cameraPermissionState.canUseCamera
         }
         .task(id: viewModel.cameraPermissionState) {
             if viewModel.cameraPermissionState.canUseCamera {
-                if !showGuide {
-                    showGuide = true
+                presentCameraGuideIfNeeded()
+                if !showCameraGuide {
+                    startARCoachingGate()
                 }
                 await viewModel.startScanning()
             } else {
+                arCoachingTask?.cancel()
+                shouldShowARCoaching = true
                 viewModel.stopScanning()
                 viewModel.arService.stop()
             }
@@ -88,6 +110,15 @@ struct CameraView: View {
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
                 viewModel.refreshPermissionState()
+                if viewModel.cameraPermissionState.canUseCamera, !viewModel.arService.isARReady {
+                    startARCoachingGate()
+                }
+            }
+        }
+        .onChange(of: showCameraGuide) { _, isPresented in
+            viewModel.setScanningPaused(isPresented)
+            if !isPresented, viewModel.cameraPermissionState.canUseCamera {
+                startARCoachingGate()
             }
         }
         .alert("Permission kamera belum ada", isPresented: $viewModel.showPermissionAlert) {
@@ -107,51 +138,45 @@ struct CameraView: View {
             Spacer()
 
             CircleIconButton(systemName: "info") {
-                showGuide = true
+                viewModel.setScanningPaused(true)
+                showCameraGuide = true
             }
         }
     }
 
-    private var checkingStatus: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 8) {
-                statusPill(
-                    text: viewModel.permissionStatusText,
-                    dotColor: viewModel.permissionStatusColor
-                )
-
-                statusPill(
-                    text: viewModel.arService.isARReady ? "AR On" : "AR Off",
-                    dotColor: viewModel.arService.isARReady ? .green : .red
-                )
-
-                if viewModel.arService.isARReady {
-                    statusPill(
-                        text: viewModel.fishStatusText,
-                        dotColor: viewModel.segmentedFishes.count == 1 ? .green : .yellow
-                    )
-                }
-            }
-
-            Spacer()
-        }
-        .padding(.top, 84)
+    private func presentCameraGuideIfNeeded() {
+        guard !hasSeenCameraGuide else { return }
+        hasSeenCameraGuide = true
+        viewModel.setScanningPaused(true)
+        showCameraGuide = true
     }
 
-    private func statusPill(text: String, dotColor: Color) -> some View {
-        HStack(spacing: 5) {
-            Circle()
-                .fill(dotColor)
-                .frame(width: 8, height: 8)
+    private func startARCoachingGate() {
+        arCoachingTask?.cancel()
+        shouldShowARCoaching = true
 
-            Text(text)
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(.black)
-                .lineLimit(1)
+        arCoachingTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+
+            while !viewModel.arService.isARReady, !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 120_000_000)
+            }
+
+            guard !Task.isCancelled else { return }
+            shouldShowARCoaching = false
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .background(.white.opacity(0.72), in: Capsule())
+    }
+
+    private var centerInstruction: some View {
+        Text(viewModel.centerInstructionText)
+            .font(.system(size: 18, weight: .bold))
+            .foregroundStyle(.white)
+            .multilineTextAlignment(.center)
+            .lineSpacing(4)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+            .background(.black.opacity(0.42), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .shadow(radius: 4)
     }
 
     private var permissionBackground: some View {
@@ -211,124 +236,142 @@ struct CameraView: View {
                     .background(.red.opacity(0.7), in: Capsule())
             }
 
-            if !viewModel.arService.isARReady {
-                Image(systemName: "iphone.gen3")
-                    .font(.system(size: 42, weight: .regular))
-                    .foregroundStyle(.white)
-                    .shadow(radius: 3)
-            }
-
-            Text(viewModel.isProcessing ? "Processing fish" : viewModel.guidanceText)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.white)
-                .shadow(radius: 2)
-
             Button {
-                viewModel.capture()
+                Task {
+                    await viewModel.capture()
+                }
             } label: {
                 ZStack {
                     Circle()
-                        .fill(viewModel.canCapture ? Color.black : Color.white.opacity(0.55))
+                        .fill(viewModel.canCapture && !viewModel.isCapturing ? Color.black : Color.white.opacity(0.55))
                         .frame(width: 64, height: 64)
 
                     Circle()
                         .stroke(Color.white.opacity(0.82), lineWidth: 3)
                         .frame(width: 76, height: 76)
 
-                    if viewModel.isProcessing {
+                    if viewModel.isCapturing {
                         ProgressView()
                             .tint(.black)
                     }
                 }
             }
             .buttonStyle(.plain)
-            .disabled(!viewModel.canCapture)
+            .disabled(!viewModel.canCapture || viewModel.isCapturing)
         }
-    }
-}
-
-private struct CameraSegmentationOverlay: View {
-    let image: UIImage
-    let fishes: [SegmentedFish]
-    let displaySize: CGSize
-
-    var body: some View {
-        let frame = imageFrame(imageSize: image.size, displaySize: displaySize)
-
-        ZStack {
-            ForEach(fishes) { fish in
-                Image(uiImage: fish.maskImage)
-                    .resizable()
-                    .frame(width: frame.width, height: frame.height)
-                    .position(x: frame.midX, y: frame.midY)
-                    .blendMode(.screen)
-                    .opacity(0.78)
-
-                let box = convertBoundingBox(
-                    fish.fish.boundingBox,
-                    imageSize: image.size,
-                    imageFrame: frame
-                )
-
-                RoundedRectangle(cornerRadius: 3)
-                    .stroke(Color.white, lineWidth: 3)
-                    .frame(width: box.width, height: box.height)
-                    .position(x: box.midX, y: box.midY)
-
-                RoundedRectangle(cornerRadius: 3)
-                    .stroke(Color.brandSky, lineWidth: 2)
-                    .frame(width: box.width + 5, height: box.height + 5)
-                    .position(x: box.midX, y: box.midY)
-
-                if let length = fish.fish.estimatedLengthCm {
-                    Text(String(format: "%.0f cm", length))
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.black)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(.white.opacity(0.82), in: Capsule())
-                        .position(x: box.midX, y: max(box.minY - 14, 24))
-                }
-            }
-        }
-        .allowsHitTesting(false)
-    }
-
-    private func imageFrame(imageSize: CGSize, displaySize: CGSize) -> CGRect {
-        let scale = max(displaySize.width / imageSize.width, displaySize.height / imageSize.height)
-        let width = imageSize.width * scale
-        let height = imageSize.height * scale
-
-        return CGRect(
-            x: (displaySize.width - width) / 2,
-            y: (displaySize.height - height) / 2,
-            width: width,
-            height: height
-        )
-    }
-
-    private func convertBoundingBox(_ bbox: CGRect, imageSize: CGSize, imageFrame: CGRect) -> CGRect {
-        CGRect(
-            x: imageFrame.minX + bbox.minX * imageFrame.width,
-            y: imageFrame.minY + (1 - bbox.maxY) * imageFrame.height,
-            width: bbox.width * imageFrame.width,
-            height: bbox.height * imageFrame.height
-        )
     }
 }
 
 private struct ARCameraContainer: UIViewRepresentable {
     @ObservedObject var service: ARMeasurementService
+    let isCoachingVisible: Bool
+    private static let coachingOverlayTag = 618
 
     func makeUIView(context: Context) -> ARSCNView {
         let view = ARSCNView(frame: .zero)
         view.backgroundColor = .black
+        view.debugOptions = []
         service.attach(sceneView: view)
+
+        let coachingOverlay = ARCoachingOverlayView()
+        coachingOverlay.tag = Self.coachingOverlayTag
+        coachingOverlay.session = view.session
+        coachingOverlay.goal = .anyPlane
+        coachingOverlay.activatesAutomatically = false
+        coachingOverlay.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(coachingOverlay)
+        NSLayoutConstraint.activate([
+            coachingOverlay.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            coachingOverlay.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            coachingOverlay.topAnchor.constraint(equalTo: view.topAnchor),
+            coachingOverlay.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
+        coachingOverlay.isHidden = !isCoachingVisible
+        coachingOverlay.setActive(isCoachingVisible, animated: false)
+
         service.start()
         return view
     }
 
-    func updateUIView(_ uiView: ARSCNView, context: Context) {}
+    func updateUIView(_ uiView: ARSCNView, context: Context) {
+        guard let coachingOverlay = uiView.viewWithTag(Self.coachingOverlayTag) as? ARCoachingOverlayView else {
+            return
+        }
+
+        coachingOverlay.isHidden = !isCoachingVisible
+        coachingOverlay.setActive(isCoachingVisible, animated: true)
+    }
+}
+
+private struct FishScanCornerGuide: View {
+    let boundingBox: CGRect
+    let imageSize: CGSize
+    @State private var pulse = false
+
+    var body: some View {
+        GeometryReader { proxy in
+            let rect = displayRect(in: proxy.size)
+
+            Path { path in
+                addCornerLines(to: &path, rect: rect)
+            }
+            .trim(from: 0, to: pulse ? 1 : 0.82)
+            .stroke(
+                Color.white.opacity(0.9),
+                style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round)
+            )
+            .shadow(color: .black.opacity(0.35), radius: 5, x: 0, y: 2)
+            .scaleEffect(pulse ? 1.02 : 0.98, anchor: .center)
+            .animation(.easeInOut(duration: 0.72).repeatForever(autoreverses: true), value: pulse)
+            .onAppear { pulse = true }
+        }
+    }
+
+    private func displayRect(in displaySize: CGSize) -> CGRect {
+        guard imageSize.width > 0, imageSize.height > 0 else { return .zero }
+
+        let scale = max(displaySize.width / imageSize.width, displaySize.height / imageSize.height)
+        let width = imageSize.width * scale
+        let height = imageSize.height * scale
+        let imageFrame = CGRect(
+            x: (displaySize.width - width) / 2,
+            y: (displaySize.height - height) / 2,
+            width: width,
+            height: height
+        )
+
+        let minX = imageFrame.minX + boundingBox.minX * imageFrame.width
+        let maxX = imageFrame.minX + boundingBox.maxX * imageFrame.width
+        let minY = imageFrame.minY + (1 - boundingBox.maxY) * imageFrame.height
+        let maxY = imageFrame.minY + (1 - boundingBox.minY) * imageFrame.height
+
+        return CGRect(
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY
+        ).insetBy(dx: -10, dy: -10)
+    }
+
+    private func addCornerLines(to path: inout Path, rect: CGRect) {
+        let cornerLength = min(max(min(rect.width, rect.height) * 0.18, 18), 42)
+
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY + cornerLength))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.minX + cornerLength, y: rect.minY))
+
+        path.move(to: CGPoint(x: rect.maxX - cornerLength, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + cornerLength))
+
+        path.move(to: CGPoint(x: rect.maxX, y: rect.maxY - cornerLength))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.maxX - cornerLength, y: rect.maxY))
+
+        path.move(to: CGPoint(x: rect.minX + cornerLength, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - cornerLength))
+    }
 }
 
 #Preview {

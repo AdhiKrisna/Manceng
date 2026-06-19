@@ -12,26 +12,20 @@ import UIKit
 @MainActor
 final class CatchReviewViewModel: ObservableObject {
     let image: UIImage?
-    let segmentedFishes: [SegmentedFish]
+    let reviewFishImage: UIImage?
+    let savedFishImage: UIImage?
+    private let primaryFish: DetectedFish?
 
     var fishName: String {
         "Catfish"
     }
 
     var weightText: String {
-        String(format: "%.1f kg", weightValue)
+        String(format: "%.1f", weightValue)
     }
 
     var lengthText: String {
-        String(format: "%.0f cm", lengthValue)
-    }
-
-    var primaryFish: DetectedFish? {
-        primarySegmentedFish?.fish
-    }
-
-    var primarySegmentedFish: SegmentedFish? {
-        segmentedFishes.max { $0.fish.confidence < $1.fish.confidence }
+        String(format: "%.0f", lengthValue)
     }
 
     var lengthValue: Double {
@@ -42,36 +36,40 @@ final class CatchReviewViewModel: ObservableObject {
         primaryFish?.estimatedWeightKg ?? 0.7
     }
 
-    var maskedFishImage: UIImage? {
-        guard let image,
-              let segmentedFish = primarySegmentedFish else {
-            return nil
-        }
-
-        return Self.makeMaskedFishImage(
-            image: image,
-            maskImage: segmentedFish.maskImage
-        )
-    }
-
     init(image: UIImage?, segmentedFishes: [SegmentedFish]) {
         self.image = image
-        self.segmentedFishes = segmentedFishes
+        let primarySegmentedFish = segmentedFishes.max { $0.fish.confidence < $1.fish.confidence }
+        self.primaryFish = primarySegmentedFish?.fish
+
+        if let image, let maskImage = primarySegmentedFish?.maskImage {
+            let maskedImages = Self.makeMaskedFishImages(image: image, maskImage: maskImage)
+            self.reviewFishImage = maskedImages.review
+            self.savedFishImage = maskedImages.saved
+        } else {
+            self.reviewFishImage = nil
+            self.savedFishImage = nil
+        }
     }
 
-    private static func makeMaskedFishImage(
+    private struct PixelImage {
+        let pixels: [UInt8]
+        let width: Int
+        let height: Int
+    }
+
+    private static func makeMaskedFishImages(
         image: UIImage,
         maskImage: UIImage
-    ) -> UIImage? {
+    ) -> (review: UIImage?, saved: UIImage?) {
         let imageSize = image.size
-        guard imageSize.width > 0, imageSize.height > 0 else { return nil }
+        guard imageSize.width > 0, imageSize.height > 0 else { return (nil, nil) }
         let canvasWidth = max(1, Int(imageSize.width.rounded()))
         let canvasHeight = max(1, Int(imageSize.height.rounded()))
 
         guard let imagePixels = rgbaPixels(from: image, width: canvasWidth, height: canvasHeight),
               let maskPixels = rgbaPixels(from: maskImage, width: canvasWidth, height: canvasHeight),
               let maskBounds = alphaBounds(in: maskPixels, width: canvasWidth, height: canvasHeight) else {
-            return nil
+            return (nil, nil)
         }
 
         let paddingX = max(maskBounds.width * 0.08, 6)
@@ -81,14 +79,20 @@ final class CatchReviewViewModel: ObservableObject {
             .intersection(CGRect(origin: .zero, size: imageSize))
             .integral
 
-        guard cropRect.width > 1, cropRect.height > 1 else { return nil }
+        guard cropRect.width > 1, cropRect.height > 1 else { return (nil, nil) }
 
-        return cutoutImage(
+        guard let cutout = cutoutPixels(
             imagePixels: imagePixels,
             maskPixels: maskPixels,
             sourceWidth: canvasWidth,
             cropRect: cropRect
-        )
+        ) else {
+            return (nil, nil)
+        }
+
+        let reviewPixels = displayCorrectedPixels(from: cutout)
+        let savedPixels = rotateCounterClockwise(reviewPixels)
+        return (makeImage(from: reviewPixels), makeImage(from: savedPixels))
     }
 
     private static func rgbaPixels(from image: UIImage, width: Int, height: Int) -> [UInt8]? {
@@ -142,12 +146,12 @@ final class CatchReviewViewModel: ObservableObject {
         )
     }
 
-    private static func cutoutImage(
+    private static func cutoutPixels(
         imagePixels: [UInt8],
         maskPixels: [UInt8],
         sourceWidth: Int,
         cropRect: CGRect
-    ) -> UIImage? {
+    ) -> PixelImage? {
         let sourceHeight = max(1, imagePixels.count / max(1, sourceWidth * 4))
         let cropX = max(0, Int(cropRect.minX))
         let cropY = max(0, Int(cropRect.minY))
@@ -170,20 +174,19 @@ final class CatchReviewViewModel: ObservableObject {
             }
         }
 
-        let orientedOutput = portraitOrientedPixels(
-            outputPixels,
-            width: cropWidth,
-            height: cropHeight
-        )
+        return PixelImage(pixels: outputPixels, width: cropWidth, height: cropHeight)
+    }
+
+    private static func makeImage(from pixelImage: PixelImage) -> UIImage? {
         let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let data = Data(orientedOutput.pixels)
+        let data = Data(pixelImage.pixels)
         guard let provider = CGDataProvider(data: data as CFData),
               let cgImage = CGImage(
-                width: orientedOutput.width,
-                height: orientedOutput.height,
+                width: pixelImage.width,
+                height: pixelImage.height,
                 bitsPerComponent: 8,
                 bitsPerPixel: 32,
-                bytesPerRow: orientedOutput.width * 4,
+                bytesPerRow: pixelImage.width * 4,
                 space: colorSpace,
                 bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
                 provider: provider,
@@ -197,33 +200,73 @@ final class CatchReviewViewModel: ObservableObject {
         return UIImage(cgImage: cgImage, scale: 1, orientation: .up)
     }
 
-    private static func portraitOrientedPixels(
-        _ pixels: [UInt8],
-        width: Int,
-        height: Int
-    ) -> (pixels: [UInt8], width: Int, height: Int) {
-        guard width > height else {
-            return (pixels, width, height)
+    private static func displayCorrectedPixels(from pixelImage: PixelImage) -> PixelImage {
+        flipVertically(reviewDisplayPixels(from: pixelImage))
+    }
+
+    private static func reviewDisplayPixels(from pixelImage: PixelImage) -> PixelImage {
+        guard pixelImage.height > pixelImage.width else { return pixelImage }
+        return rotateClockwise(pixelImage)
+    }
+
+    private static func flipVertically(_ pixelImage: PixelImage) -> PixelImage {
+        var flippedPixels = [UInt8](repeating: 0, count: pixelImage.pixels.count)
+
+        for y in 0..<pixelImage.height {
+            let sourceRowStart = y * pixelImage.width * 4
+            let destinationRowStart = (pixelImage.height - 1 - y) * pixelImage.width * 4
+            let rowLength = pixelImage.width * 4
+
+            flippedPixels.replaceSubrange(
+                destinationRowStart..<(destinationRowStart + rowLength),
+                with: pixelImage.pixels[sourceRowStart..<(sourceRowStart + rowLength)]
+            )
         }
 
-        let rotatedWidth = height
-        let rotatedHeight = width
-        var rotatedPixels = [UInt8](repeating: 0, count: pixels.count)
+        return PixelImage(pixels: flippedPixels, width: pixelImage.width, height: pixelImage.height)
+    }
 
-        for y in 0..<height {
-            for x in 0..<width {
-                let sourceOffset = (y * width + x) * 4
-                let destinationX = height - 1 - y
+    private static func rotateClockwise(_ pixelImage: PixelImage) -> PixelImage {
+        let rotatedWidth = pixelImage.height
+        let rotatedHeight = pixelImage.width
+        var rotatedPixels = [UInt8](repeating: 0, count: pixelImage.pixels.count)
+
+        for y in 0..<pixelImage.height {
+            for x in 0..<pixelImage.width {
+                let sourceOffset = (y * pixelImage.width + x) * 4
+                let destinationX = pixelImage.height - 1 - y
                 let destinationY = x
                 let destinationOffset = (destinationY * rotatedWidth + destinationX) * 4
 
-                rotatedPixels[destinationOffset] = pixels[sourceOffset]
-                rotatedPixels[destinationOffset + 1] = pixels[sourceOffset + 1]
-                rotatedPixels[destinationOffset + 2] = pixels[sourceOffset + 2]
-                rotatedPixels[destinationOffset + 3] = pixels[sourceOffset + 3]
+                rotatedPixels[destinationOffset] = pixelImage.pixels[sourceOffset]
+                rotatedPixels[destinationOffset + 1] = pixelImage.pixels[sourceOffset + 1]
+                rotatedPixels[destinationOffset + 2] = pixelImage.pixels[sourceOffset + 2]
+                rotatedPixels[destinationOffset + 3] = pixelImage.pixels[sourceOffset + 3]
             }
         }
 
-        return (rotatedPixels, rotatedWidth, rotatedHeight)
+        return PixelImage(pixels: rotatedPixels, width: rotatedWidth, height: rotatedHeight)
+    }
+
+    private static func rotateCounterClockwise(_ pixelImage: PixelImage) -> PixelImage {
+        let rotatedWidth = pixelImage.height
+        let rotatedHeight = pixelImage.width
+        var rotatedPixels = [UInt8](repeating: 0, count: pixelImage.pixels.count)
+
+        for y in 0..<pixelImage.height {
+            for x in 0..<pixelImage.width {
+                let sourceOffset = (y * pixelImage.width + x) * 4
+                let destinationX = y
+                let destinationY = pixelImage.width - 1 - x
+                let destinationOffset = (destinationY * rotatedWidth + destinationX) * 4
+
+                rotatedPixels[destinationOffset] = pixelImage.pixels[sourceOffset]
+                rotatedPixels[destinationOffset + 1] = pixelImage.pixels[sourceOffset + 1]
+                rotatedPixels[destinationOffset + 2] = pixelImage.pixels[sourceOffset + 2]
+                rotatedPixels[destinationOffset + 3] = pixelImage.pixels[sourceOffset + 3]
+            }
+        }
+
+        return PixelImage(pixels: rotatedPixels, width: rotatedWidth, height: rotatedHeight)
     }
 }

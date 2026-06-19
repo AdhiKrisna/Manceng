@@ -1,47 +1,58 @@
 
-//
-//  MainView.swift
-//  Manceng
-//
-//  Created by Made Vidyatma Adhi Krisna on 10/06/26.
-//
-
-import Foundation
-import SwiftUI
-import SwiftData
 import MapKit
+import SwiftData
+import SwiftUI
 
 struct MapView: View {
     @Query(sort: \CatchModel.capturedAt, order: .reverse) private var catches: [CatchModel]
-    @StateObject private var locationService = LocationService()
+    @State private var cameraPosition: MapCameraPosition = .automatic
+
+    private var mappedCatches: [CatchModel] {
+        catches.filter { item in
+            item.latitude != nil && item.longitude != nil
+        }
+    }
 
     var body: some View {
-        ZStack {
-            if let firstCatch = catches.first, let lat = firstCatch.latitude, let lon = firstCatch.longitude {
-                Map(position: .constant(.region(MKCoordinateRegion(
-                    center: CLLocationCoordinate2D(latitude: lat, longitude: lon),
-                    span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-                )))) {
-                    ForEach(catches.filter { $0.latitude != nil && $0.longitude != nil }) { catchItem in
-                        Marker(
-                            catchItem.species,
-                            coordinate: CLLocationCoordinate2D(
-                                latitude: catchItem.latitude!,
-                                longitude: catchItem.longitude!
-                            )
-                        )
+        Map(position: $cameraPosition) {
+            ForEach(mappedCatches) { item in
+                if let latitude = item.latitude,
+                   let longitude = item.longitude {
+                    Annotation(
+                        item.species,
+                        coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+                    ) {
+                        VStack(spacing: 4) {
+                            Image(systemName: "fish.fill")
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundStyle(.white)
+                                .frame(width: 36, height: 36)
+                                .background(Color.brandBlue, in: Circle())
+
+                            Text(item.species)
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(.black)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(.white.opacity(0.85), in: Capsule())
+                        }
                     }
                 }
-            } else {
-                Map(position: .constant(.region(MKCoordinateRegion(
-                    center: CLLocationCoordinate2D(latitude: -6.2088, longitude: 106.8456),
-                    span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-                ))))
             }
         }
-        .ignoresSafeArea()
-        .onAppear {
-            locationService.requestAuthorization()
+        .mapControls {
+            MapUserLocationButton()
+            MapCompass()
+            MapScaleView()
+        }
+        .overlay {
+            if mappedCatches.isEmpty {
+                ContentUnavailableView(
+                    "No catch locations yet",
+                    systemImage: "map",
+                    description: Text("Saved catches with location access will appear here.")
+                )
+            }
         }
     }
 }

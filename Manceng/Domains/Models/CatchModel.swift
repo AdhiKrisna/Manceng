@@ -36,8 +36,8 @@ final class CatchModel: Identifiable {
         weight: Double,
         length: Double,
         location: String?,
-        latitude: Double?,
-        longitude: Double?,
+        latitude: Double? = nil,
+        longitude: Double? = nil,
         capturedAt: Date = Date()
     ) {
         self.id = id

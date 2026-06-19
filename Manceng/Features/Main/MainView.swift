@@ -1,5 +1,5 @@
 import SwiftUI
-import SwiftData
+import UIKit
 
 struct MainView: View {
     @Binding var selectedTab: Tab
@@ -8,7 +8,7 @@ struct MainView: View {
 
     @State private var path = NavigationPath()
     @State private var walkthroughStep = 0
-    @Environment(\.modelContext) private var modelContext
+    @State private var showCameraSettingsAlert = false
 
     enum Tab: Hashable {
         case home, map, history, camera
@@ -41,7 +41,6 @@ struct MainView: View {
                         .tabItem { Label("History", systemImage: "fish.fill") }
                         .tag(Tab.history)
 
-                    // Tab camera sebagai trigger interseptor
                     Color.clear
                         .tabItem { Label("Camera", systemImage: "camera.fill") }
                         .tag(Tab.camera)
@@ -52,34 +51,30 @@ struct MainView: View {
                 }
                 .onChange(of: selectedTab) { old, new in
                     if new == .camera {
-                        // Kembalikan seleksi tab ke tab sebelumnya agar posisi tidak stuck di tab kosong
                         selectedTab = old
-                        // Push ke CameraView melalui NavigationPath
-                        path.append(Destination.camera)
+                        handleCameraTabSelection()
                     }
                 }
                 .navigationDestination(for: Destination.self) { destination in
                     switch destination {
                     case .camera:
-                        CameraView { catchModel in
-                            // 1. Simpan data ke SwiftData
-                            modelContext.insert(catchModel)
-                            do {
-                                try modelContext.save()
-                            } catch {
-                                print("Failed to save catch: \(error)")
-                            }
-                            
-                            // 2. Set tab kembali ke home setelah selesai memotret/menyimpan
+                        CameraView { _ in
                             selectedTab = .home
                             
-                            // 3. KUNCI PERBAIKAN: Pop stack navigasi agar kembali ke MainView asli (bukan tertahan di Camera)
                             if !path.isEmpty {
                                 path.removeLast()
                             }
                         }
                     }
                 }
+            }
+            .alert("Camera access needed", isPresented: $showCameraSettingsAlert) {
+                Button("Settings") {
+                    openCameraSettings()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Aktifkan akses Camera di Settings untuk membuka fitur capture.")
             }
 
             if showWalkthrough {
@@ -95,6 +90,35 @@ struct MainView: View {
         }
         .onChange(of: walkthroughStep) { _, newValue in
             syncSelectedTab(newValue)
+        }
+    }
+
+    private func openCameraSettings() {
+        guard let settingsURL = URL(string: UIApplication.openSettingsURLString),
+              UIApplication.shared.canOpenURL(settingsURL) else {
+            return
+        }
+
+        UIApplication.shared.open(settingsURL)
+    }
+
+    private func handleCameraTabSelection() {
+        let permissionService = CameraPermissionService()
+
+        switch permissionService.currentState() {
+        case .authorized:
+            path.append(Destination.camera)
+        case .notDetermined:
+            Task { @MainActor in
+                let permissionState = await permissionService.requestAccess()
+                if permissionState.canUseCamera {
+                    path.append(Destination.camera)
+                } else {
+                    showCameraSettingsAlert = true
+                }
+            }
+        case .denied, .restricted:
+            showCameraSettingsAlert = true
         }
     }
 
