@@ -65,7 +65,7 @@ struct CameraGuideView: View {
         }
         .frame(height: onContinue == nil ? 440 : 500)
         .background(
-            Color.black.opacity(0.6)
+            Color.white.opacity(0.6)
                 .background(.ultraThinMaterial.opacity(0.35))
         )
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
