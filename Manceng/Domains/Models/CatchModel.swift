@@ -7,7 +7,6 @@
 
 import SwiftUI
 import SwiftData
-import Combine
 
 @Model
 final class CatchModel: Identifiable {

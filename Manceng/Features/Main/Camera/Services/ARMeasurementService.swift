@@ -222,17 +222,8 @@ final class ARMeasurementService: NSObject, ObservableObject {
             guard hasPlane else {
                 return "Find a nearby surface to measure"
             }
-
-            if let distance {
-                if distance < 0.18 {
-                    return "Move further away"
-                }
-                if distance > 1.4 {
-                    return "Move closer"
-                }
-            }
-
-            return "1 fish only\nHead must face left"
+            
+            return "Keep the fish head on the left and tail on the right"
         }
     }
 
@@ -302,11 +293,7 @@ extension ARMeasurementService: ARSessionDelegate {
                 trackingIsNormal = false
             }
 
-            let distanceIsUsable = planeState.distance.map { distance in
-                distance >= 0.18 && distance <= 1.4
-            } ?? true
-
-            self.isARReady = trackingIsNormal && planeState.hasPlane && distanceIsUsable
+            self.isARReady = trackingIsNormal && planeState.hasPlane
             self.trackingStateText = self.isARReady ? "AR On" : "AR Off"
             if self.isARReady {
                 self.sessionErrorMessage = nil

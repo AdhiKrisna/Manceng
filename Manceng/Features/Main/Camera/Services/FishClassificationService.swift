@@ -5,7 +5,6 @@
 //  Created by Made Vidyatma Adhi Krisna on 19/06/26.
 //
 
-import CoreGraphics
 import CoreML
 import UIKit
 
