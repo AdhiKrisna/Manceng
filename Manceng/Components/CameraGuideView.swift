@@ -124,7 +124,7 @@ struct CameraGuideView: View {
             action()
         } label: {
             Text("Mulai Capture")
-                .font(.buttonFont)
+                .font(.ButtonFont)
                 .foregroundStyle(Color.brandWhite)
                 .frame(maxWidth: .infinity)
                 .frame(height: 54)

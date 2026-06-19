@@ -18,7 +18,7 @@ let onBoardingData: [OnBoardingModel] = [
     OnBoardingModel(
         image: "onboarding",
         title: "FiShare",
-        caption: "Welcome Angler! identify your catch instantly with AR-powered camera technology. Fast, easy and fun."
+        caption: "Welcome Angler!\nidentify your catch instantly with AR-powered camera technology. Fast, easy and fun."
     ),
     OnBoardingModel(
         image: "onboarding1",

@@ -2,150 +2,190 @@
 //  CatchDetailView.swift
 //  Manceng
 //
-//  Halaman detail tangkapan: area model 3D yang berganti mengikuti baris
-//  statistik yang dipilih (Length → penggaris+ikan, Weight → timbangan,
-//  Location → globe), judul nama ikan, dan tiga baris statistik.
+//  Halaman detail tangkapan: mirip dengan CatchReviewView tapi tanpa save,
+//  dengan 3D model preview dan button back, share, hapus.
 //
 
 import SwiftUI
+import SwiftData
+import UIKit
 
 struct CatchDetailView: View {
-    var speciesName: String = "BARRAMUNDI FISH"
-    var length: String = "50 cm"
-    var weight: String = "7.2 Kg"
-    var location: String = "Batam"
-
-    enum Stat: Hashable { case length, weight, location }
-
     @Environment(\.dismiss) private var dismiss
-
+    @Environment(\.modelContext) private var modelContext
+    
+    // CatchModel untuk data tangkapan asli (atau backward compatible parameters)
+    let catchModel: CatchModel?
+    let speciesName: String
+    let length: String
+    let weight: String
+    let location: String
+    
+    @State private var showShareTemplate = false
+    @State private var showDeleteAlert = false
     @StateObject private var motion = Model3DMotionManager()
-    @State private var lengthInteraction = FishInteractionState()
-    @State private var weightInteraction = FishInteractionState()
-
-    @State private var selected: Stat = .length
+    @State private var fishInteraction = FishInteractionState()
+    
+    // Backward compatible initializer
+    init(
+        speciesName: String = "BARRAMUNDI FISH",
+        length: String = "50 cm",
+        weight: String = "7.2 Kg",
+        location: String = "Batam"
+    ) {
+        self.catchModel = nil
+        self.speciesName = speciesName
+        self.length = length
+        self.weight = weight
+        self.location = location
+    }
+    
+    // Initializer with CatchModel
+    init(catchModel: CatchModel) {
+        self.catchModel = catchModel
+        self.speciesName = catchModel.species.uppercased()
+        self.length = String(format: "%.0f cm", catchModel.length)
+        self.weight = String(format: "%.1f Kg", catchModel.weight)
+        self.location = catchModel.location ?? "-"
+    }
 
     var body: some View {
-        ZStack {
-            Color.BrandColorPrimaryYellow
-                .ignoresSafeArea()
+        GeometryReader { proxy in
+            let availableHeight = proxy.size.height
+            let previewHeight = min(300, max(210, availableHeight * 0.34))
+            let topPadding = max(24, proxy.safeAreaInsets.top + 12)
 
-            VStack(spacing: 0) {
-                topBar
-                    .padding(.horizontal, 20)
-                    .padding(.top, 8)
+            ZStack {
+                Color.BrandColorPrimaryYellow
+                    .ignoresSafeArea()
 
-                // --- Area model 3D / ilustrasi (berganti mengikuti pilihan) ---
-                ZStack {
-                    switch selected {
-                    case .length:
-                        FishLengthModelView(motion: motion, interaction: lengthInteraction)
-                    case .weight:
-                        ScaleModelView(motion: motion, interaction: weightInteraction)
-                    case .location:
-                        locationGlobe
-                    }
+                VStack(alignment: .leading, spacing: 18) {
+                    fishPreview(height: previewHeight)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: previewHeight)
+
+                    infoCard
+
+                    Spacer(minLength: 8)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                // --- Judul nama ikan ---
-                Text(speciesName)
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(Color.NeutralColorPrimaryBlack1)
-                    .padding(.bottom, 28)
-
-                // --- Tiga baris statistik ---
-                VStack(spacing: 14) {
-                    statRow(label: "Length", value: length, stat: .length)
-                    statRow(label: "Weight", value: weight, stat: .weight)
-                    statRow(label: "Location", value: location, stat: .location)
-                }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 40)
+                .padding(.horizontal, 20)
+                .padding(.top, topPadding)
+                .padding(.bottom, max(18, proxy.safeAreaInsets.bottom + 10))
             }
+            .overlay(alignment: .top) { topBar }
         }
         .navigationBarBackButtonHidden(true)
-        .toolbar(.hidden, for: .navigationBar)
+        .fullScreenCover(isPresented: $showShareTemplate) {
+            if let catchModel = catchModel {
+                ShareTemplatesView(
+                    fishImage: catchModel.image,
+                    species: catchModel.species,
+                    weight: catchModel.weight,
+                    length: catchModel.length,
+                    location: catchModel.location ?? "Unknown"
+                )
+            }
+        }
+        .alert("Delete Catch?", isPresented: $showDeleteAlert) {
+            Button("Delete", role: .destructive) {
+                if let catchModel = catchModel {
+                    modelContext.delete(catchModel)
+                    do {
+                        try modelContext.save()
+                    } catch {
+                        print("Failed to delete catch: \(error.localizedDescription)")
+                    }
+                    dismiss()
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Are you sure you want to delete this catch? This action cannot be undone.")
+        }
         .onAppear { motion.start() }
         .onDisappear { motion.stop() }
     }
 
-    // MARK: - Top bar
-
     private var topBar: some View {
         HStack {
-            circleButton(systemName: "chevron.left") { dismiss() }
+            CircleIconButton(systemName: "chevron.left") { dismiss() }
 
             Spacer()
 
             HStack(spacing: 6) {
-                circleButton(systemName: "square.and.arrow.up") {}
-                circleButton(systemName: "trash") {}
-            }
-            .padding(.horizontal, 6)
-            .background(Capsule().fill(.background.secondary))
-        }
-    }
-
-    private func circleButton(systemName: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(Color.NeutralColorPrimaryBlack1)
-                .frame(width: 44, height: 44)
-                .background(Circle().fill(.background.secondary))
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: - Stat row
-
-    private func statRow(label: String, value: String, stat: Stat) -> some View {
-        let isSelected = selected == stat
-        let foreground = isSelected ? Color.NeutralColorPrimaryWhite : Color.NeutralColorPrimaryBlack1
-
-        return Button {
-            selected = stat
-        } label: {
-            HStack(spacing: 10) {
-                Text(label)
-                    .font(.system(size: 16, weight: .medium))
-
-                Rectangle()
-                    .fill(foreground.opacity(0.6))
-                    .frame(height: 1)
-
-                Text(value)
-                    .font(.system(size: 16, weight: .medium))
-            }
-            .foregroundStyle(foreground)
-            .padding(.vertical, 12)
-            .padding(.horizontal, 18)
-            .background {
-                if isSelected {
-                    Capsule().fill(
-                        LinearGradient(
-                            colors: [Color(hex: "#5A4500"), Color(hex: "#2C2300")],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
+                CircleIconButton(systemName: "square.and.arrow.up") {
+                    showShareTemplate = true
+                }
+                if catchModel != nil {
+                    CircleIconButton(systemName: "trash") {
+                        showDeleteAlert = true
+                    }
                 }
             }
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
     }
 
-    // MARK: - Location globe
+    private func fishPreview(height: CGFloat) -> some View {
+        ZStack {
+            VStack(spacing: 0) {
+                Spacer(minLength: 0)
+                FishModelView(
+                    motion: motion,
+                    interaction: fishInteraction,
+                    onSingleTap: {},
+                    extraYawDegrees: 90,
+                    fillSize: 0.45,
+                    allowZoom: false
+                )
+                .frame(height: min(150, height * 0.55))
+                .shadow(color: .black.opacity(0.35), radius: 18, x: 0, y: 30)
 
-    private var locationGlobe: some View {
-        Image(systemName: "globe.asia.australia.fill")
-            .resizable()
-            .scaledToFit()
-            .foregroundStyle(Color.NeutralColorPrimaryBlack1)
-            .frame(width: 360)
-            .offset(x: 70, y: -10)
-            .clipped()
+                Ellipse()
+                    .fill(.black.opacity(0.22))
+                    .blur(radius: 16)
+                    .frame(width: 210, height: 34)
+                    .padding(.top, 18)
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 20)
+        }
+    }
+
+    private var infoCard: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            field(label: "Fish Name", value: speciesName)
+
+            HStack(alignment: .top) {
+                let weightValue = catchModel?.weight ?? 0
+                let lengthValue = catchModel?.length ?? 0
+                field(label: "Weight", value: String(format: "%.1f", weightValue), unit: "kg", isSize: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                field(label: "Length", value: String(format: "%.0f", lengthValue), unit: "cm", isSize: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            field(label: "Location", value: location)
+        }
+        .padding(.horizontal, 20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func field(label: String, value: String, unit: String? = nil, isSize: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.Caption1Bold)
+                .foregroundStyle(.black)
+
+            Text("\(Text(value).font(.Title1Bold)) \(Text(unit ?? "").font(.kgcmFont))")
+                .foregroundStyle(.black)
+                .lineLimit(2)
+                .minimumScaleFactor(0.75)
+                .padding(.leading, isSize ? 30 : 0)
+        }
     }
 }
 

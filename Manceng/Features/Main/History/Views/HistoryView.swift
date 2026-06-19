@@ -13,6 +13,11 @@ struct HistoryView: View {
     @StateObject private var model3DMotion = Model3DMotionManager()
     @State private var interaction = FishInteractionState()
     @Query private var allCatches: [CatchModel]
+    let onSelectCatch: (CatchModel) -> Void
+    
+    init(onSelectCatch: @escaping (CatchModel) -> Void) {
+        self.onSelectCatch = onSelectCatch
+    }
 
     private var sortedCatches: [CatchModel] {
         switch selectedSort {
@@ -63,7 +68,7 @@ struct HistoryView: View {
     private var header: some View {
         ZStack {
             Text("History")
-                .font(.title1Semibold)
+                .font(.Title1Semibold)
                 .foregroundStyle(Color.NeutralColorPrimaryBlack1)
 
             HStack {
@@ -90,13 +95,13 @@ struct HistoryView: View {
 
             VStack(spacing: 8) {
                 Text("No catches recorded yet!")
-                    .font(.title1Semibold)
+                    .font(.Title1Semibold)
                     .foregroundColor(.NeutralColorPrimaryBlack1)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
 
                 Text("Tap camera button below to get started!")
-                    .font(.caption1Bold)
+                    .font(.Caption1Bold)
                     .foregroundColor(.NeutralColorPrimaryBlack1.opacity(0.7))
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
@@ -136,6 +141,9 @@ struct HistoryView: View {
                 .minimumScaleFactor(0.75)
         }
         .frame(maxWidth: .infinity)
+        .onTapGesture {
+            onSelectCatch(item)
+        }
     }
 
     private func bottomText(for item: CatchModel) -> String {
@@ -151,5 +159,5 @@ struct HistoryView: View {
 }
 
 #Preview {
-    HistoryView()
+    HistoryView { _ in }
 }

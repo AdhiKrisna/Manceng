@@ -2,7 +2,7 @@
 //  PinMap.swift
 //  Manceng
 //
-//  Created by Trae AI on 18/06/26.
+//  Created by Raihan Zhaky Al Hafizh on 18/06/26.
 //
 
 import SwiftUI
@@ -15,19 +15,19 @@ struct PinMap: View {
             Image(uiImage: catchModel.image)
                 .resizable()
                 .scaledToFill()
-                .frame(width: 120, height: 120)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .frame(width: 60, height: 60)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.white, lineWidth: 4)
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.white, lineWidth: 3)
                 )
             
             Triangle()
                 .fill(Color.white)
-                .frame(width: 30, height: 20)
+                .frame(width: 20, height: 14)
                 .offset(y: -2)
         }
-        .shadow(color: .black.opacity(0.2), radius: 8, y: 4)
+        .shadow(color: .black.opacity(0.2), radius: 6, y: 3)
     }
 }
 
@@ -55,5 +55,5 @@ struct Triangle: Shape {
     )
     return PinMap(catchModel: sampleCatch)
         .padding()
-        .background(Color.gray)
+        .background(Color.red)
 }

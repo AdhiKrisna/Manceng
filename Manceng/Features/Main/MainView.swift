@@ -16,6 +16,7 @@ struct MainView: View {
 
     enum Destination: Hashable {
         case camera
+        case catchDetail(CatchModel)
     }
 
     private let walkthroughSteps: [WalkthroughStep] = [
@@ -33,11 +34,15 @@ struct MainView: View {
                         .tabItem { Label("Home", systemImage: "house.fill") }
                         .tag(Tab.home)
 
-                    MapView()
+                    MapView { catchModel in
+                        path.append(Destination.catchDetail(catchModel))
+                    }
                         .tabItem { Label("Maps", systemImage: "map.fill") }
                         .tag(Tab.map)
 
-                    HistoryView()
+                    HistoryView { catchModel in
+                        path.append(Destination.catchDetail(catchModel))
+                    }
                         .tabItem { Label("History", systemImage: "fish.fill") }
                         .tag(Tab.history)
 
@@ -65,6 +70,8 @@ struct MainView: View {
                                 path.removeLast()
                             }
                         }
+                    case .catchDetail(let catchModel):
+                        CatchDetailView(catchModel: catchModel)
                     }
                 }
             }

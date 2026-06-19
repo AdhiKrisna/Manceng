@@ -12,22 +12,31 @@ struct OnBoarding: View {
     let image: Image
     let title: String
     let caption: String
+    let imageSize: CGSize?
     
-    init(image: Image, title: String, caption: String) {
+    init(image: Image, title: String, caption: String, imageSize: CGSize? = nil) {
         self.image = image
         self.title = title
         self.caption = caption
+        self.imageSize = imageSize
     }
     
     var body: some View {
         VStack(spacing: 0) {
             // Gambar full-width (edge-to-edge), scaledToFit agar utuh seperti desain.
-            image
-                .resizable()
-                .scaledToFit()
-                .frame(maxWidth: .infinity)
+            if let size = imageSize {
+                image
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: size.width, height: size.height)
+            } else {
+                image
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity)
+            }
 
-            Spacer().frame(height: 48)
+            Spacer().frame(height: 105)
 
             VStack(spacing: 15) {
                 Text(title)
@@ -50,7 +59,8 @@ struct OnBoarding: View {
         OnBoarding(
             image: Image("onboarding"),
             title: "FiShare",
-            caption: "Welcome Angler! identify your catch instantly with AR-powered camera technology. Fast, easy and fun."
+            caption: "Welcome Angler!\nidentify your catch instantly with AR-powered camera technology. Fast, easy and fun.",
+            imageSize: CGSize(width: 190.75, height: 202.87)
         )
     }
 }
