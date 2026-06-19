@@ -16,11 +16,11 @@ struct CustomButton: View {
         Button(action: action) {
             HStack {
                 Text(title)
-                    .font(.Title1Semibold)
-                    .foregroundColor(.NeutralColorPrimaryLemon)
+                    .font(.title1Semibold)
+                    .foregroundColor(.neutralColorPrimaryLemon)
             }
             .frame(width: 363, height: 58, alignment: .center)
-            .background(Color.NeutralColorPrimaryBrown1)
+            .background(Color.neutralColorPrimaryBrown1)
             .clipShape(RoundedRectangle(cornerRadius: Radius.borderRadius))
         }
     }

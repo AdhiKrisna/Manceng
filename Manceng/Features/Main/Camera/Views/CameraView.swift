@@ -185,12 +185,8 @@ struct CameraView: View {
     }
 
     private var permissionBackground: some View {
-        LinearGradient(
-            colors: [Color.black, Color.brandBlue.opacity(0.92)],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-        .ignoresSafeArea()
+        Color.neutralColorPrimaryBlack1
+                .ignoresSafeArea()
     }
 
     private var permissionControls: some View {

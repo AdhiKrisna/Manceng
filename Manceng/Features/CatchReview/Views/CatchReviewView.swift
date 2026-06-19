@@ -47,7 +47,7 @@ struct CatchReviewView: View {
             let topPadding = max(48, proxy.safeAreaInsets.top + 36)
 
             ZStack {
-                Color.BrandColorPrimaryYellow
+                Color.brandColorPrimaryYellow
                     .ignoresSafeArea()
 
                 VStack(alignment: .leading, spacing: 18) {
@@ -164,10 +164,10 @@ struct CatchReviewView: View {
     private func field(label: String, value: String, unit: String? = nil, isSize: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
-                .font(.Caption1Bold)
+                .font(.captionRegular)
                 .foregroundStyle(.black)
 
-            Text("\(Text(value).font(.Title1Bold)) \(Text(unit ?? "").font(.kgcmFont))")
+            Text("\(Text(value).font(.title1Bold)) \(Text(unit ?? "").font(.kgCmFont))")
                 .foregroundStyle(.black)
                 .lineLimit(2)
                 .minimumScaleFactor(0.75)

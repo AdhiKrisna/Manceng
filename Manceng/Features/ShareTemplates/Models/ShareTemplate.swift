@@ -33,7 +33,7 @@ extension ShareTemplate {
             previewImage: nil,
             backgroundColorHex: "#FFCC00",
             cardColorHex: "#8A8A8A",
-            textColor: .NeutralColorPrimaryBlack1,
+            textColor: .neutralColorPrimaryBlack1,
             accentColor: .white
         ),
         ShareTemplate(
@@ -42,7 +42,7 @@ extension ShareTemplate {
             backgroundColorHex: "#1A6699",
             cardColorHex: "#0F4566",
             textColor: .white,
-            accentColor: .BrandColorPrimaryYellow
+            accentColor: .brandColorPrimaryYellow
         ),
         ShareTemplate(
             name: "Sunset Orange",

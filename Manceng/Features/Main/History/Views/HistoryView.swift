@@ -62,14 +62,14 @@ struct HistoryView: View {
             Spacer()
 
         }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .background(Color.BrandColorPrimaryYellow)
+            .background(Color.brandColorPrimaryYellow)
     }
 
     private var header: some View {
         ZStack {
             Text("History")
-                .font(.Title1Semibold)
-                .foregroundStyle(Color.NeutralColorPrimaryBlack1)
+                .font(.title1Semibold)
+                .foregroundStyle(Color.neutralColorPrimaryBlack1)
 
             HStack {
                 Spacer()
@@ -95,14 +95,14 @@ struct HistoryView: View {
 
             VStack(spacing: 8) {
                 Text("No catches recorded yet!")
-                    .font(.Title1Semibold)
-                    .foregroundColor(.NeutralColorPrimaryBlack1)
+                    .font(.title1Semibold)
+                    .foregroundColor(.neutralColorPrimaryBlack1)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
 
                 Text("Tap camera button below to get started!")
-                    .font(.Caption1Bold)
-                    .foregroundColor(.NeutralColorPrimaryBlack1.opacity(0.7))
+                    .font(.caption1Bold)
+                    .foregroundColor(.neutralColorPrimaryBlack1.opacity(0.7))
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
                     .minimumScaleFactor(0.75)

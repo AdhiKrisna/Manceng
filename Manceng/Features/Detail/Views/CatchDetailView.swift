@@ -56,7 +56,7 @@ struct CatchDetailView: View {
             let topPadding = max(24, proxy.safeAreaInsets.top + 12)
 
             ZStack {
-                Color.BrandColorPrimaryYellow
+                Color.brandColorPrimaryYellow
                     .ignoresSafeArea()
 
                 VStack(alignment: .leading, spacing: 18) {
@@ -177,10 +177,10 @@ struct CatchDetailView: View {
     private func field(label: String, value: String, unit: String? = nil, isSize: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
-                .font(.Caption1Bold)
+                .font(.caption1Bold)
                 .foregroundStyle(.black)
 
-            Text("\(Text(value).font(.Title1Bold)) \(Text(unit ?? "").font(.kgcmFont))")
+            Text("\(Text(value).font(.title1Bold)) \(Text(unit ?? "").font(.kgCmFont))")
                 .foregroundStyle(.black)
                 .lineLimit(2)
                 .minimumScaleFactor(0.75)

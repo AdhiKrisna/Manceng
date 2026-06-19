@@ -49,7 +49,7 @@ struct HomeView: View {
 
     var body: some View {
         ZStack {
-            Color.BrandColorPrimaryYellow
+            Color.brandColorPrimaryYellow
                 .ignoresSafeArea()
 
             if catches.isEmpty {
@@ -105,8 +105,8 @@ struct HomeView: View {
             // Judul nama ikan — sticky di atas.
             VStack {
                 Text(currentCatch?.species ?? "")
-                    .font(.Title1Bold)
-                    .foregroundColor(.NeutralColorPrimaryBlack1)
+                    .font(.title1Bold)
+                    .foregroundColor(.neutralColorPrimaryBlack1)
                     .padding(.top, 8)
                 Spacer()
             }
@@ -208,12 +208,12 @@ struct HomeView: View {
 
             VStack(spacing: 8) {
                 Text("No catches recorded yet!")
-                    .font(.Title1Semibold)
-                    .foregroundColor(.NeutralColorPrimaryBlack1)
+                    .font(.title1Semibold)
+                    .foregroundColor(.neutralColorPrimaryBlack1)
 
                 Text("Tap camera button below to get started!")
-                    .font(.Caption1Bold)
-                    .foregroundColor(.NeutralColorPrimaryBlack1.opacity(0.7))
+                    .font(.caption1Bold)
+                    .foregroundColor(.neutralColorPrimaryBlack1.opacity(0.7))
                     .multilineTextAlignment(.center)
             }
         }
