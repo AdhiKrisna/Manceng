@@ -6,7 +6,6 @@
 //
 
 import UIKit
-import CoreGraphics
 
 struct SegmentedFish: Identifiable {
     let id = UUID()

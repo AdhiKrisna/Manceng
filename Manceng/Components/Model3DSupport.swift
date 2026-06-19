@@ -9,7 +9,6 @@
 
 import RealityKit
 import SwiftUI
-import UIKit
 
 // MARK: - Loader
 
