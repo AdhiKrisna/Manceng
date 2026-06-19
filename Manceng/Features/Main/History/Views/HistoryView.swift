@@ -143,10 +143,16 @@ struct HistoryView: View {
         case .latest:
             return item.capturedAt.formatted(date: .numeric, time: .omitted)
         case .weight:
-            return String(format: "%.0f Kg", item.weight)
+            return "\(formattedWeight(item.weight)) kg"
         case .length:
             return String(format: "%.0f cm", item.length)
         }
+    }
+
+    private func formattedWeight(_ weight: Double) -> String {
+        weight < 1
+            ? String(format: "%.2f", weight)
+            : String(format: "%.1f", weight)
     }
 }
 

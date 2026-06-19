@@ -29,6 +29,8 @@ final class CameraViewModel: ObservableObject {
     private let cameraService = CameraService()
     private let permissionService = CameraPermissionService()
     private let catchLocationService = CatchLocationService()
+    private let classificationService = FishClassificationService()
+    private let weightEstimationService = FishWeightEstimationService()
     private let scanIntervalNanoseconds: UInt64 = 900_000_000
     private var scanningTask: Task<Void, Never>?
 
@@ -150,22 +152,22 @@ final class CameraViewModel: ObservableObject {
             return
         }
         guard arService.isARReady else {
-            errorMessage = "AR belum On"
+            errorMessage = "AR is not ready yet"
             return
         }
         let lockedFishes = segmentedFishes
 
         guard lockedFishes.count == 1 else {
-            errorMessage = segmentedFishes.isEmpty ? "Ikan belum terdeteksi" : "Pastikan hanya ada 1 ikan"
+            errorMessage = segmentedFishes.isEmpty ? "No fish detected yet" : "Make sure only 1 fish is visible"
             return
         }
         guard let lockedFish = lockedFishes.first,
               FishMaskOrientationAnalyzer.isHeadLeftTailRight(maskImage: lockedFish.maskImage) else {
-            errorMessage = "Arahkan kepala ikan ke kiri"
+            errorMessage = "Keep the fish head on the left"
             return
         }
         guard let image = scannedImage else {
-            errorMessage = "Camera belum siap"
+            errorMessage = "Camera is not ready yet"
             return
         }
 
@@ -209,13 +211,26 @@ final class CameraViewModel: ObservableObject {
         let fishes = await segment(image: image)
         var enriched = fishes
         for index in enriched.indices {
+            let classification = await classify(
+                image: image,
+                boundingBox: enriched[index].fish.boundingBox
+            )
+            let speciesName = classification?.speciesName ?? "Fish class unavailable"
             let length = arService.estimateLengthCm(
                 for: enriched[index].fish.boundingBox,
                 imageSize: image.size
             )
             enriched[index].fish.estimatedLengthCm = length
-            enriched[index].fish.estimatedWeightKg = 0.7
-            enriched[index].fish.species = "Catfish"
+            enriched[index].fish.species = speciesName
+            enriched[index].fish.speciesConfidence = classification?.confidence
+
+            if let length {
+                enriched[index].fish.estimatedWeightKg =
+                    weightEstimationService.estimateWeightKg(speciesName: speciesName, lengthCm: length)
+                    ?? arService.estimateWeightKg(lengthCm: length)
+            } else {
+                enriched[index].fish.estimatedWeightKg = nil
+            }
         }
 
         scannedImage = image
@@ -227,6 +242,17 @@ final class CameraViewModel: ObservableObject {
         await withCheckedContinuation { continuation in
             cameraService.segment(image: image) { fishes in
                 continuation.resume(returning: fishes)
+            }
+        }
+    }
+
+    private func classify(image: UIImage, boundingBox: CGRect) async -> FishClassificationResult? {
+        let classificationService = classificationService
+
+        return await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let result = classificationService.classify(image: image, boundingBox: boundingBox)
+                continuation.resume(returning: result)
             }
         }
     }
