@@ -46,6 +46,10 @@ struct MainView: View {
                         .tabItem { Label("Camera", systemImage: "camera.fill") }
                         .tag(Tab.camera)
                 }
+                .tint(.NeutralColorPrimaryWhite)
+                .onAppear {
+                    UITabBar.appearance().unselectedItemTintColor = UIColor(Color.NeutralColorPrimaryBlack1)
+                }
                 .onChange(of: selectedTab) { old, new in
                     if new == .camera {
                         // Kembalikan seleksi tab ke tab sebelumnya agar posisi tidak stuck di tab kosong

@@ -13,6 +13,7 @@ import MapKit
 
 struct MapView: View {
     @Query(sort: \CatchModel.capturedAt, order: .reverse) private var catches: [CatchModel]
+    @StateObject private var locationService = LocationService()
 
     var body: some View {
         ZStack {
@@ -39,6 +40,9 @@ struct MapView: View {
             }
         }
         .ignoresSafeArea()
+        .onAppear {
+            locationService.requestAuthorization()
+        }
     }
 }
 

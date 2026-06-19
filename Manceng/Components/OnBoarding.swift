@@ -12,13 +12,11 @@ struct OnBoarding: View {
     let image: Image
     let title: String
     let caption: String
-    let showDots: Bool
     
-    init(image: Image, title: String, caption: String, showDots: Bool = false) {
+    init(image: Image, title: String, caption: String) {
         self.image = image
         self.title = title
         self.caption = caption
-        self.showDots = showDots
     }
     
     var body: some View {
@@ -31,21 +29,6 @@ struct OnBoarding: View {
 
             Spacer().frame(height: 48)
 
-            if showDots {
-                HStack(spacing: 8) {
-                    Circle()
-                        .fill(Color.NeutralColorPrimaryBlack2)
-                        .frame(width: 8, height: 8)
-                    Circle()
-                        .fill(Color.NeutralColorPrimaryBlack2)
-                        .frame(width: 8, height: 8)
-                    Circle()
-                        .fill(Color.NeutralColorPrimaryBlack2)
-                        .frame(width: 8, height: 8)
-                }
-                .padding(.bottom, 48)
-            }
-
             VStack(spacing: 15) {
                 Text(title)
                     .font(.Title1Semibold)
@@ -53,7 +36,7 @@ struct OnBoarding: View {
                     .multilineTextAlignment(.center)
 
                 Text(caption)
-                    .font(.Caption1Bold)
+                    .font(.CaptionRegular)
                     .foregroundColor(.NeutralColorPrimaryBlack1)
                     .multilineTextAlignment(.center)
             }
@@ -65,7 +48,7 @@ struct OnBoarding: View {
 #Preview {
     Group {
         OnBoarding(
-            image: Image(systemName: "fish"),
+            image: Image("onboarding"),
             title: "FiShare",
             caption: "Welcome Angler! identify your catch instantly with AR-powered camera technology. Fast, easy and fun."
         )

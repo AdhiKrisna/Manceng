@@ -78,7 +78,7 @@ struct RulerView: View {
 
 #Preview {
     HStack(spacing: 40) {
-        RulerView(maxCm: 70)
+        RulerView(maxCm: 80)
         RulerView(maxCm: 40)
     }
     .padding()
