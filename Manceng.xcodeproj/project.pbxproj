@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		65356A452FD9275B007F011B /* FiShare.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FiShare.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		65356A452FD9275B007F011B /* FiSharee.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FiSharee.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -40,7 +40,7 @@
 		65356A462FD9275B007F011B /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				65356A452FD9275B007F011B /* FiShare.app */,
+				65356A452FD9275B007F011B /* FiSharee.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,9 +48,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		65356A442FD9275B007F011B /* FiShare */ = {
+		65356A442FD9275B007F011B /* FiSharee */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 65356A502FD9275D007F011B /* Build configuration list for PBXNativeTarget "FiShare" */;
+			buildConfigurationList = 65356A502FD9275D007F011B /* Build configuration list for PBXNativeTarget "FiSharee" */;
 			buildPhases = (
 				65356A412FD9275B007F011B /* Sources */,
 				65356A422FD9275B007F011B /* Frameworks */,
@@ -63,11 +63,11 @@
 			fileSystemSynchronizedGroups = (
 				65356A472FD9275B007F011B /* Manceng */,
 			);
-			name = FiShare;
+			name = FiSharee;
 			packageProductDependencies = (
 			);
 			productName = Manceng;
-			productReference = 65356A452FD9275B007F011B /* FiShare.app */;
+			productReference = 65356A452FD9275B007F011B /* FiSharee.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -99,7 +99,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				65356A442FD9275B007F011B /* FiShare */,
+				65356A442FD9275B007F011B /* FiSharee */,
 			);
 		};
 /* End PBXProject section */
@@ -328,7 +328,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		65356A502FD9275D007F011B /* Build configuration list for PBXNativeTarget "FiShare" */ = {
+		65356A502FD9275D007F011B /* Build configuration list for PBXNativeTarget "FiSharee" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				65356A512FD9275D007F011B /* Debug */,
