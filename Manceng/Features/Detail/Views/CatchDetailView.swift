@@ -43,7 +43,7 @@ struct CatchDetailView: View {
     // Initializer with CatchModel
     init(catchModel: CatchModel) {
         self.catchModel = catchModel
-        self.speciesName = catchModel.species.uppercased()
+        self.speciesName = catchModel.species.capitalized
         self.length = String(format: "%.0f cm", catchModel.length)
         self.weight = String(format: "%.1f Kg", catchModel.weight)
         self.location = catchModel.location ?? "-"
@@ -168,13 +168,13 @@ struct CatchDetailView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            field(label: "Location", value: location)
+            field(label: "Location", value: location, lineLimit: 1)
         }
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func field(label: String, value: String, unit: String? = nil, isSize: Bool = false) -> some View {
+    private func field(label: String, value: String, unit: String? = nil, isSize: Bool = false, lineLimit: Int = 2) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
                 .font(.captionRegular)
@@ -182,7 +182,8 @@ struct CatchDetailView: View {
 
             Text("\(Text(value).font(.title1Bold)) \(Text(unit ?? "").font(.kgCmFont))")
                 .foregroundStyle(.black)
-                .lineLimit(2)
+                .lineLimit(lineLimit)
+                .truncationMode(.tail)
                 .minimumScaleFactor(0.75)
                 .padding(.leading, isSize ? 30 : 0)
         }

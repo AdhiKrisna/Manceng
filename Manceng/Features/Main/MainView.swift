@@ -27,52 +27,93 @@ struct MainView: View {
     ]
 
     var body: some View {
-        ZStack {
-            NavigationStack(path: $path) {
-                TabView(selection: $selectedTab) {
-                    HomeView()
-                        .tabItem { Label("Home", systemImage: "house.fill") }
-                        .tag(Tab.home)
-
-                    MapView { catchModel in
-                        path.append(Destination.catchDetail(catchModel))
-                    }
-                        .tabItem { Label("Maps", systemImage: "map.fill") }
-                        .tag(Tab.map)
-
-                    HistoryView { catchModel in
-                        path.append(Destination.catchDetail(catchModel))
-                    }
-                        .tabItem { Label("History", systemImage: "fish.fill") }
-                        .tag(Tab.history)
-
-                    Color.clear
-                        .tabItem { Label("Camera", systemImage: "camera.fill") }
-                        .tag(Tab.camera)
-                }
-                .tint(.neutralColorPrimaryWhite)
-                .onAppear {
-                    UITabBar.appearance().unselectedItemTintColor = UIColor(Color.neutralColorPrimaryBlack1)
-                }
-                .onChange(of: selectedTab) { old, new in
-                    if new == .camera {
-                        selectedTab = old
-                        handleCameraTabSelection()
-                    }
-                }
-                .navigationDestination(for: Destination.self) { destination in
-                    switch destination {
-                    case .camera:
-                        CameraView { _ in
-                            selectedTab = .home
-                            
-                            if !path.isEmpty {
-                                path.removeLast()
-                            }
+        NavigationStack(path: $path) {
+            ZStack(alignment: .bottom) {
+                // Main Content
+                Group {
+                    switch selectedTab {
+                    case .home: HomeView()
+                    case .map:
+                        MapView { catchModel in
+                            path.append(Destination.catchDetail(catchModel))
                         }
-                    case .catchDetail(let catchModel):
-                        CatchDetailView(catchModel: catchModel)
+                    case .history:
+                        HistoryView { catchModel in
+                            path.append(Destination.catchDetail(catchModel))
+                        }
+                    case .camera:
+                        Color.clear
                     }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .toolbar(.hidden)
+                
+                // Custom Tab Bar
+                HStack(spacing: 8) {
+                    // Left Capsule (Navigation)
+                    HStack(spacing: 0) {
+                        tabItemButton(
+                            title: "Home",
+                            icon: "house.fill",
+                            tab: .home
+                        )
+                        tabItemButton(
+                            title: "Maps",
+                            icon: "map.fill",
+                            tab: .map
+                        )
+                        tabItemButton(
+                            title: "History",
+                            icon: "fish.fill",
+                            tab: .history
+                        )
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 8)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Capsule())
+                    .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                    
+                    Spacer()
+                    
+                    // Right Circle (Camera Action)
+                    Button {
+                        handleCameraTabSelection()
+                    } label: {
+                        Image(systemName: "camera.fill")
+                            .font(.system(size: 24, weight: .semibold))
+                            .foregroundColor(.neutralColorPrimaryBlack1)
+                            .frame(width: 60, height: 60)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Circle())
+                            .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                    }
+                    .buttonStyle(GlassPressStyle())
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
+                
+                // Walkthrough
+                if showWalkthrough {
+                    MainWalkthroughView(
+                        steps: walkthroughSteps,
+                        currentStep: $walkthroughStep,
+                        onNext: advanceWalkthrough
+                    )
+                }
+            }
+            .navigationDestination(for: Destination.self) { destination in
+                switch destination {
+                case .camera:
+                    CameraView { _ in
+                        selectedTab = .home
+                        
+                        if !path.isEmpty {
+                            path.removeLast()
+                        }
+                    }
+                case .catchDetail(let catchModel):
+                    CatchDetailView(catchModel: catchModel)
                 }
             }
             .alert("Camera access needed", isPresented: $showCameraSettingsAlert) {
@@ -83,14 +124,6 @@ struct MainView: View {
             } message: {
                 Text("Aktifkan akses Camera di Settings untuk membuka fitur capture.")
             }
-
-            if showWalkthrough {
-                MainWalkthroughView(
-                    steps: walkthroughSteps,
-                    currentStep: $walkthroughStep,
-                    onNext: advanceWalkthrough
-                )
-            }
         }
         .onAppear {
             if showWalkthrough { syncSelectedTab(walkthroughStep) }
@@ -98,6 +131,31 @@ struct MainView: View {
         .onChange(of: walkthroughStep) { _, newValue in
             syncSelectedTab(newValue)
         }
+    }
+    
+    private func tabItemButton(title: String, icon: String, tab: Tab) -> some View {
+        let isSelected = selectedTab == tab
+        
+        return Button {
+            selectedTab = tab
+        } label: {
+            VStack(spacing: 2) {
+                Image(systemName: icon)
+                    .font(.system(size: 20, weight: .semibold))
+                Text(title)
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 14)
+            .background {
+                if isSelected {
+                    Capsule()
+                        .fill(Color.neutralColorPrimaryLemon)
+                }
+            }
+            .foregroundColor(isSelected ? .neutralColorPrimaryWhite : .neutralColorPrimaryBlack1)
+        }
+        .buttonStyle(GlassPressStyle())
     }
 
     private func openCameraSettings() {

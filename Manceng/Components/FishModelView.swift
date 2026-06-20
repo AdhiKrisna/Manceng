@@ -107,9 +107,9 @@ struct FishModelView: View {
     /// Izinkan pinch zoom. Bila false, ukuran terkunci (tidak bisa zoom in/out).
     var allowZoom: Bool = true
 
-    /// Seberapa besar pengaruh gyro terhadap rotasi model (>1 = dilebih-lebihkan
-    /// supaya efek spasialnya lebih terasa).
-    private let gyroInfluence: Float = 1.4
+    /// Seberapa besar pengaruh gyro terhadap rotasi model. Sengaja rendah
+    /// supaya ikan hanya "menengok" halus mengikuti device, tidak heboh.
+    private let gyroInfluence: Float = 0.5
     /// Konversi piksel drag -> radian.
     private let dragSensitivity: Float = 0.012
 
@@ -194,9 +194,12 @@ struct FishModelView: View {
 
                 // Kontribusi gyro dibatasi dengan SOFT-limit (tanh): makin dekat
                 // batas makin pelan, tapi tidak pernah "mentok" mendadak seperti
-                // hard clamp — menghilangkan rasa stuck saat device dimiringkan jauh.
-                let gyroYaw = 1.0 * tanh(Float(motion.roll) * influence / 1.0)
-                let gyroPitch = 0.8 * tanh(Float(motion.pitch) * influence / 0.8)
+                // hard clamp. Envelope sengaja kecil (~20° yaw, ~14° pitch) agar
+                // ikan tidak terlalu bergerak saat device dimiringkan.
+                let yawLimit: Float = 0.35
+                let pitchLimit: Float = 0.25
+                let gyroYaw = yawLimit * tanh(Float(motion.roll) * influence / yawLimit)
+                let gyroPitch = pitchLimit * tanh(Float(motion.pitch) * influence / pitchLimit)
 
                 // Gabungan rotasi: gyro sebagai base, drag sebagai offset tambahan.
                 let yaw = state.committedYaw + state.activeYaw + gyroYaw

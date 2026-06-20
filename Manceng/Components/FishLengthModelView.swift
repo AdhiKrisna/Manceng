@@ -43,7 +43,7 @@ struct FishLengthModelView: View {
 
     @State private var zoomState = NumberZoomState()
 
-    private let gyroInfluence: Float = 1.4
+    private let gyroInfluence: Float = 0.5
     private let dragSensitivity: Float = 0.012
 
     // MARK: - Konstanta (MUDAH DISESUAIKAN)
@@ -142,8 +142,11 @@ struct FishLengthModelView: View {
                 state.stepResetAnimationIfNeeded()
 
                 // Rotasi container (gyro + drag), sama seperti timbangan.
-                let gyroYaw = 1.0 * tanh(Float(motion.roll) * influence / 1.0)
-                let gyroPitch = 0.8 * tanh(Float(motion.pitch) * influence / 0.8)
+                // Envelope kecil (~20° yaw, ~14° pitch) supaya gerak halus & terbatas.
+                let yawLimit: Float = 0.35
+                let pitchLimit: Float = 0.25
+                let gyroYaw = yawLimit * tanh(Float(motion.roll) * influence / yawLimit)
+                let gyroPitch = pitchLimit * tanh(Float(motion.pitch) * influence / pitchLimit)
                 let yaw = state.committedYaw + state.activeYaw + gyroYaw
                 let dragPitch = min(max(state.committedPitch + state.activePitch, -1.2), 1.2)
                 let pitch = dragPitch + gyroPitch
