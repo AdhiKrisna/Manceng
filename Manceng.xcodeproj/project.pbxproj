@@ -10,23 +10,9 @@
 		65356A452FD9275B007F011B /* FiSharee.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FiSharee.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-		65AC97292FE732D60060FB20 /* Exceptions for "Manceng" folder in "Copy Bundle Resources" phase from "FiSharee" target */ = {
-			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
-			buildPhase = 65356A432FD9275B007F011B /* Resources */;
-			membershipExceptions = (
-				Domains/Cores/best.mlpackage,
-				"Domains/Cores/ClassificationModel-V2.mlmodel",
-			);
-		};
-/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		65356A472FD9275B007F011B /* Manceng */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				65AC97292FE732D60060FB20 /* Exceptions for "Manceng" folder in "Copy Bundle Resources" phase from "FiSharee" target */,
-			);
 			path = Manceng;
 			sourceTree = "<group>";
 		};
