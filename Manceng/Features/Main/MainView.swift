@@ -49,7 +49,7 @@ struct MainView: View {
                 .toolbar(.hidden)
                 
                 // Custom Tab Bar
-                HStack(spacing: 8) {
+                HStack(spacing: 10) {
                     // Left Capsule (Navigation)
                     HStack(spacing: 0) {
                         tabItemButton(
@@ -73,8 +73,7 @@ struct MainView: View {
                     .background(.ultraThinMaterial)
                     .clipShape(Capsule())
                     .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
-                    
-                    Spacer()
+                    .frame(maxWidth: .infinity)
                     
                     // Right Circle (Camera Action)
                     Button {
@@ -147,13 +146,14 @@ struct MainView: View {
             }
             .padding(.vertical, 8)
             .padding(.horizontal, 14)
+            .frame(maxWidth: .infinity)
             .background {
                 if isSelected {
                     Capsule()
-                        .fill(Color.neutralColorPrimaryLemon)
+                        .fill(Color.neutralColorPrimaryWhite).opacity(0.5)
                 }
             }
-            .foregroundColor(isSelected ? .neutralColorPrimaryWhite : .neutralColorPrimaryBlack1)
+            .foregroundColor(isSelected ? .blue : .neutralColorPrimaryBlack1)
         }
         .buttonStyle(GlassPressStyle())
     }

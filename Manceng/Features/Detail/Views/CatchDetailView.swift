@@ -23,8 +23,8 @@ struct CatchDetailView: View {
     
     @State private var showShareTemplate = false
     @State private var showDeleteAlert = false
-    @StateObject private var motion = Model3DMotionManager()
-    @State private var fishInteraction = FishInteractionState()
+    @State private var imageRotationX: Double = 0
+    @State private var imageRotationY: Double = 0
     
     // Backward compatible initializer
     init(
@@ -52,7 +52,7 @@ struct CatchDetailView: View {
     var body: some View {
         GeometryReader { proxy in
             let availableHeight = proxy.size.height
-            let previewHeight = min(300, max(210, availableHeight * 0.34))
+            let previewHeight = min(430, max(300, availableHeight * 0.44))
             let topPadding = max(24, proxy.safeAreaInsets.top + 12)
 
             ZStack {
@@ -102,8 +102,6 @@ struct CatchDetailView: View {
         } message: {
             Text("Are you sure you want to delete this catch? This action cannot be undone.")
         }
-        .onAppear { motion.start() }
-        .onDisappear { motion.stop() }
     }
 
     private var topBar: some View {
@@ -131,16 +129,22 @@ struct CatchDetailView: View {
         ZStack {
             VStack(spacing: 0) {
                 Spacer(minLength: 0)
-                FishModelView(
-                    motion: motion,
-                    interaction: fishInteraction,
-                    onSingleTap: {},
-                    extraYawDegrees: 90,
-                    fillSize: 0.45,
-                    allowZoom: false
-                )
-                .frame(height: min(150, height * 0.55))
-                .shadow(color: .black.opacity(0.35), radius: 18, x: 0, y: 30)
+                detailFishImage
+                    .frame(height: min(340, height * 0.84))
+                    .shadow(color: .black.opacity(0.35), radius: 18, x: 0, y: 30)
+                    .gesture(
+                        DragGesture()
+                            .onChanged { value in
+                                imageRotationY = Double(value.translation.width) * 0.35
+                                imageRotationX = -Double(value.translation.height) * 0.35
+                            }
+                            .onEnded { _ in
+                                withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
+                                    imageRotationX = 0
+                                    imageRotationY = 0
+                                }
+                            }
+                    )
 
                 Ellipse()
                     .fill(.black.opacity(0.22))
@@ -154,14 +158,31 @@ struct CatchDetailView: View {
         }
     }
 
+    private var detailFishImage: some View {
+        Group {
+            if let image = catchModel?.image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+            } else {
+                Image(systemName: "fish.fill")
+                    .resizable()
+                    .scaledToFit()
+            }
+        }
+        .rotationEffect(.degrees(90))
+        .rotation3DEffect(.degrees(imageRotationY), axis: (x: 0, y: 1, z: 0), perspective: 0.65)
+        .rotation3DEffect(.degrees(imageRotationX), axis: (x: 1, y: 0, z: 0), perspective: 0.65)
+    }
+
     private var infoCard: some View {
         VStack(alignment: .leading, spacing: 20) {
             field(label: "Fish Name", value: speciesName)
 
             HStack(alignment: .top) {
-                let weightValue = catchModel?.weight ?? 0
                 let lengthValue = catchModel?.length ?? 0
-                field(label: "Weight", value: String(format: "%.1f", weightValue), unit: "kg", isSize: true)
+                let weightDisplay = detailWeightDisplay
+                field(label: "Weight", value: weightDisplay.value, unit: weightDisplay.unit, isSize: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 field(label: "Length", value: String(format: "%.0f", lengthValue), unit: "cm", isSize: true)
@@ -172,6 +193,24 @@ struct CatchDetailView: View {
         }
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var detailWeightDisplay: (value: String, unit: String) {
+        guard let weightValue = catchModel?.weight else {
+            let parts = weight.split(separator: " ", maxSplits: 1).map(String.init)
+            guard let value = parts.first else { return (weight, "") }
+            return (value, parts.dropFirst().first ?? "")
+        }
+
+        let grams = weightValue * 1000
+        if grams < 100 {
+            return (String(format: "%.0f", grams), "grams")
+        }
+
+        let value = weightValue < 1
+            ? String(format: "%.2f", weightValue)
+            : String(format: "%.1f", weightValue)
+        return (value, "kg")
     }
 
     private func field(label: String, value: String, unit: String? = nil, isSize: Bool = false, lineLimit: Int = 2) -> some View {

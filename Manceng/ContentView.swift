@@ -10,7 +10,7 @@ import SwiftUI
 //content utamanya disini aja
 // checking swift data, ngecek onboarding, permission maybe, dsb
 struct ContentView: View {
-    @State private var hasCompletedOnboarding = false
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @State private var selectedMainTab: MainView.Tab = .home
     
     var body: some View {

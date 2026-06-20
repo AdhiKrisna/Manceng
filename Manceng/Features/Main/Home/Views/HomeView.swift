@@ -139,6 +139,9 @@ struct HomeView: View {
         ZStack {
             let currentFishPeek = calculateCurrentFishPeek(screenWidth: geo.size.width)
             let itemWidth = geo.size.width - currentFishPeek * 2
+            let transitionOpacity = getScrollTransitionOpacity(for: selectedSort)
+            let transitionScale = getScrollTransitionScale(for: selectedSort)
+            let transitionYOffset = getScrollTransitionYOffset(for: selectedSort)
             
             ScrollView(.horizontal) {
                 HStack(spacing: 0) {
@@ -169,9 +172,9 @@ struct HomeView: View {
                         }
                         .frame(width: itemWidth, height: geo.size.height)
                         .scrollTransition { content, phase in
-                            content.opacity(phase.isIdentity ? 1 : getScrollTransitionOpacity(for: selectedSort))
-                                .scaleEffect(phase.isIdentity ? 1 : getScrollTransitionScale(for: selectedSort))
-                                .offset(y: phase.isIdentity ? 0 : getScrollTransitionYOffset(for: selectedSort))
+                            content.opacity(phase.isIdentity ? 1 : transitionOpacity)
+                                .scaleEffect(phase.isIdentity ? 1 : transitionScale)
+                                .offset(y: phase.isIdentity ? 0 : transitionYOffset)
                         }
                         .contentShape(Rectangle())
                         .onTapGesture {

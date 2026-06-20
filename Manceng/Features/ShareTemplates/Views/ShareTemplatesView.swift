@@ -40,7 +40,7 @@ struct ShareTemplatesView: View {
                 VStack(spacing: 0) {
                     header
                         .padding(.horizontal, 20)
-                        .padding(.top, max(0, proxy.safeAreaInsets.top - 8))
+                        .padding(.top, max(0, proxy.safeAreaInsets.top - 24))
 
                    
                     templateCarousel(height: proxy.size.height * 0.62, screenWidth: proxy.size.width)
@@ -359,40 +359,14 @@ struct ShareTemplateCard: View {
     }
 
     private func templateOne(_ size: CGSize) -> some View {
-        let locationLength = CGFloat(content.locationText?.count ?? 0)
-        let locationXShift = min(size.width * 0.055, max(0, locationLength - 16) * size.width * 0.002)
-        let locationYShift = min(size.height * 0.055, max(0, locationLength - 20) * size.height * 0.0012)
-
         return ZStack {
             fishView()
                 .scaleEffect(x: -1, y: -1)
                 .frame(width: size.width * 0.76, height: size.height * 0.78)
                 .position(x: size.width * 0.54, y: size.height * 0.555)
 
-            rotatedSingleLine(
-                content.speciesText,
-                size: size.width * 0.184,
-                color: template.textColor,
-                width: size.height * 0.43,
-                minScale: 0.2,
-                tracking: 0
-            )
-            .position(x: size.width * 0.135, y: size.height * 0.235)
-
-            if let locationText = content.locationText {
-                rotatedSingleLine(
-                    locationText,
-                    size: size.width * 0.041,
-                    color: template.textColor.opacity(0.66),
-                    width: size.height * 0.32,
-                    minScale: 0.24,
-                    tracking: size.width * 0.004
-                )
-                .position(
-                    x: size.width * 0.225 - locationXShift,
-                    y: size.height * 0.235 + locationYShift
-                )
-            }
+            rotatedTemplateOneLabel(size)
+                .position(x: size.width * 0.16, y: size.height * 0.235)
 
             VStack(alignment: .trailing, spacing: size.height * 0.012) {
                 Text(content.templateOneWeight)
@@ -490,7 +464,7 @@ struct ShareTemplateCard: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
                     .frame(width: size.width * 0.78)
-                    .position(x: size.width * 0.5, y: size.height * 0.925)
+                    .position(x: size.width * 0.5, y: size.height * 0.965)
             }
         }
     }
@@ -550,22 +524,26 @@ struct ShareTemplateCard: View {
         }
     }
 
-    private func rotatedSingleLine(
-        _ text: String,
-        size: CGFloat,
-        color: Color,
-        width: CGFloat,
-        minScale: CGFloat,
-        tracking: CGFloat
-    ) -> some View {
-        Text(text)
-            .font(.impactRegular(size: size))
-            .tracking(tracking)
-            .foregroundStyle(color)
-            .lineLimit(1)
-            .minimumScaleFactor(minScale)
-            .frame(width: width, alignment: .leading)
-            .rotationEffect(.degrees(-90))
+    private func rotatedTemplateOneLabel(_ size: CGSize) -> some View {
+        VStack(alignment: .leading, spacing: size.height * 0.002) {
+            Text(content.speciesText)
+                .font(.impactRegular(size: size.width * 0.184))
+                .foregroundStyle(template.textColor)
+                .lineLimit(1)
+                .minimumScaleFactor(0.2)
+                .frame(width: size.height * 0.43, alignment: .leading)
+
+            if let locationText = content.locationText {
+                Text(locationText)
+                    .font(.impactRegular(size: size.width * 0.041))
+                    .tracking(size.width * 0.004)
+                    .foregroundStyle(template.textColor.opacity(0.66))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.24)
+                    .frame(width: size.height * 0.38, alignment: .leading)
+            }
+        }
+        .rotationEffect(.degrees(-90))
     }
 }
 
