@@ -13,12 +13,7 @@ struct CatchReviewView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @StateObject private var viewModel: CatchReviewViewModel
-    private let locationMetadata: CatchLocationMetadata?
-    @State private var showShareTemplate = false
-    @State private var savedCatchModel: CatchModel?
-    @State private var showLocationSettingsAlert = false
 
-    let shouldPromptLocationSettings: Bool
     let onRetake: () -> Void
     let onSave: (CatchModel) -> Void
 
@@ -32,10 +27,10 @@ struct CatchReviewView: View {
     ) {
         _viewModel = StateObject(wrappedValue: CatchReviewViewModel(
             image: image,
-            segmentedFishes: segmentedFishes
+            segmentedFishes: segmentedFishes,
+            locationMetadata: locationMetadata,
+            shouldPromptLocationSettings: shouldPromptLocationSettings
         ))
-        self.locationMetadata = locationMetadata
-        self.shouldPromptLocationSettings = shouldPromptLocationSettings
         self.onRetake = onRetake
         self.onSave = onSave
     }
@@ -67,21 +62,18 @@ struct CatchReviewView: View {
             }
             .overlay(alignment: .top) { topBar }
         }
-        .fullScreenCover(isPresented: $showShareTemplate) {
+        .fullScreenCover(isPresented: $viewModel.showShareTemplate) {
             ShareTemplatesView(
                 fishImage: viewModel.savedFishImage ?? viewModel.image ?? UIImage(),
                 species: viewModel.fishName,
                 weight: viewModel.weightValue,
                 length: viewModel.lengthValue,
-                location: locationDisplayText
+                location: viewModel.locationDisplayText
             )
         }
-        .onAppear {
-            showLocationSettingsAlert = shouldPromptLocationSettings
-        }
-        .alert("Location access unavailable", isPresented: $showLocationSettingsAlert) {
+        .alert("Location access unavailable", isPresented: $viewModel.showLocationSettingsAlert) {
             Button("Settings") {
-                openSettings()
+                viewModel.openSettings()
             }
             Button("Save as Unknown", role: .cancel) {}
         } message: {
@@ -96,9 +88,7 @@ struct CatchReviewView: View {
             Spacer()
 
             CircleIconButton(systemName: "square.and.arrow.up") {
-                if persistCatchIfNeeded() != nil {
-                    showShareTemplate = true
-                }
+                viewModel.shareCatch(modelContext: modelContext)
             }
             
         }
@@ -148,7 +138,7 @@ struct CatchReviewView: View {
             field(label: "Fish Name", value: viewModel.fishName)
 
             HStack(alignment: .top) {
-                field(label: "Weight", value: viewModel.weightText, unit: "kg", isSize: true)
+                field(label: "Weight", value: viewModel.weightText, unit: viewModel.weightUnitText, isSize: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 field(label: "Length", value: viewModel.lengthText, unit: "cm", isSize: true)
@@ -177,54 +167,15 @@ struct CatchReviewView: View {
 
     private var saveButton: some View {
         ButtonOnboard(title: "Save") {
-            if let catchModel = persistCatchIfNeeded() {
+            if let catchModel = viewModel.persistCatchIfNeeded(modelContext: modelContext) {
                 onSave(catchModel)
                 dismiss()
             }
         }
     }
 
-    private func persistCatchIfNeeded() -> CatchModel? {
-        if let savedCatchModel {
-            return savedCatchModel
-        }
-
-        let catchModel = makeCatchModel()
-        modelContext.insert(catchModel)
-
-        do {
-            try modelContext.save()
-            savedCatchModel = catchModel
-            return catchModel
-        } catch {
-            print("Failed to save catch: \(error.localizedDescription)")
-            return nil
-        }
-    }
-    
-    private func makeCatchModel() -> CatchModel {
-        CatchModel(
-            image: viewModel.savedFishImage ?? viewModel.image ?? UIImage(),
-            species: viewModel.fishName,
-            weight: viewModel.weightValue,
-            length: viewModel.lengthValue,
-            location: locationDisplayText,
-            latitude: locationMetadata?.latitude,
-            longitude: locationMetadata?.longitude
-        )
-    }
-
     private var locationDisplayText: String {
-        locationMetadata?.displayName ?? "Unknown"
-    }
-
-    private func openSettings() {
-        guard let settingsURL = URL(string: UIApplication.openSettingsURLString),
-              UIApplication.shared.canOpenURL(settingsURL) else {
-            return
-        }
-
-        UIApplication.shared.open(settingsURL)
+        viewModel.locationDisplayText
     }
 }
 

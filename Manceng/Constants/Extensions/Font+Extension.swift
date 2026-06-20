@@ -17,4 +17,8 @@ extension Font {
     static let buttonFont = Font.system(size: 20, weight: .semibold, design: .rounded)
     static let captionRegular = Font.system(size: 15, weight: .regular, design: .serif)
     static let kgCmFont = Font.system(size: 17, weight: .bold, design: .serif)
+
+    static func impactRegular(size: CGFloat) -> Font {
+        Font.custom("Impact", size: size)
+    }
 }

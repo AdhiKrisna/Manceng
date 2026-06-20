@@ -24,6 +24,8 @@ final class CameraViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var showPermissionAlert = false
     @Published var showUnknownSpeciesAlert = false
+    @Published var showCameraGuide = false
+    @Published var shouldShowARCoaching = true
     private var isScanningPaused = false
 
     let arService = ARMeasurementService()
@@ -34,7 +36,13 @@ final class CameraViewModel: ObservableObject {
     private let weightEstimationService = FishWeightEstimationService()
     private let minimumClassificationConfidence = 0.80
     private let scanIntervalNanoseconds: UInt64 = 900_000_000
+    private let cameraGuideSeenKey = "hasSeenCameraGuide"
     private var scanningTask: Task<Void, Never>?
+    private var arCoachingTask: Task<Void, Never>?
+
+    var isARCoachingVisible: Bool {
+        shouldShowARCoaching && !showCameraGuide
+    }
 
     var canCapture: Bool {
         cameraPermissionState.canUseCamera &&
@@ -58,7 +66,25 @@ final class CameraViewModel: ObservableObject {
             return "Show 1 fish clearly in view"
         }
 
-        return "Keep the fish head on the left and tail on the right"
+        return "Turn the fish so its head faces left"
+    }
+
+    var centerInstructionStatusText: String? {
+        guard arService.isARReady else { return nil }
+
+        if segmentedFishes.count > 1 {
+            return "Currently more than one fish is displayed in the camera"
+        }
+
+        guard hasReliableFishMeasurement else {
+            return "Currently no fish is visible"
+        }
+
+        guard hasValidFishOrientation else {
+            return "Currently your fish is facing right"
+        }
+
+        return nil
     }
 
     var focusedFishBoundingBox: CGRect? {
@@ -76,7 +102,7 @@ final class CameraViewModel: ObservableObject {
             return false
         }
 
-        return FishMaskOrientationAnalyzer.isHeadLeftTailRight(maskImage: segmentedFish.maskImage)
+        return FishMaskOrientationAnalyzer.analyze(maskImage: segmentedFish.maskImage)?.isHeadAllowedForCapture == true
     }
 
     private var hasReliableFishMeasurement: Bool {
@@ -115,6 +141,60 @@ final class CameraViewModel: ObservableObject {
         }
 
         UIApplication.shared.open(settingsURL)
+    }
+
+    func presentCameraGuideIfNeeded() {
+        guard !UserDefaults.standard.bool(forKey: cameraGuideSeenKey) else { return }
+        UserDefaults.standard.set(true, forKey: cameraGuideSeenKey)
+        presentCameraGuide()
+    }
+
+    func presentCameraGuide() {
+        setScanningPaused(true)
+        showCameraGuide = true
+    }
+
+    func setCameraGuidePresented(_ isPresented: Bool) {
+        showCameraGuide = isPresented
+        setScanningPaused(isPresented)
+        if !isPresented, cameraPermissionState.canUseCamera {
+            startARCoachingGate()
+        }
+    }
+
+    func startARCoachingGate() {
+        arCoachingTask?.cancel()
+        shouldShowARCoaching = true
+
+        arCoachingTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+
+            while !arService.isARReady, !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 120_000_000)
+            }
+
+            guard !Task.isCancelled else { return }
+            shouldShowARCoaching = false
+        }
+    }
+
+    func stopARCoachingGate() {
+        arCoachingTask?.cancel()
+        arCoachingTask = nil
+        shouldShowARCoaching = true
+    }
+
+    func handleSceneBecameActive() {
+        refreshPermissionState()
+        if cameraPermissionState.canUseCamera, !arService.isARReady {
+            startARCoachingGate()
+        }
+    }
+
+    func onDisappear() {
+        stopARCoachingGate()
+        stopScanning()
+        arService.stop()
     }
 
     func startScanning() async {
@@ -164,8 +244,8 @@ final class CameraViewModel: ObservableObject {
             return
         }
         guard let lockedFish = lockedFishes.first,
-              FishMaskOrientationAnalyzer.isHeadLeftTailRight(maskImage: lockedFish.maskImage) else {
-            errorMessage = "Keep the fish head on the left"
+              FishMaskOrientationAnalyzer.analyze(maskImage: lockedFish.maskImage)?.isHeadAllowedForCapture == true else {
+            errorMessage = "Turn the fish so its head faces left"
             return
         }
         guard (lockedFish.fish.speciesConfidence ?? 0) >= minimumClassificationConfidence else {

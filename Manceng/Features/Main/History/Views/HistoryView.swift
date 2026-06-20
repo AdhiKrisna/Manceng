@@ -9,7 +9,7 @@ import SwiftData
 import SwiftUI
 
 struct HistoryView: View {
-    @State private var selectedSort: SortOption = .latest
+    @StateObject private var viewModel = HistoryViewModel()
     @StateObject private var model3DMotion = Model3DMotionManager()
     @State private var interaction = FishInteractionState()
     @Query private var allCatches: [CatchModel]
@@ -19,17 +19,6 @@ struct HistoryView: View {
         self.onSelectCatch = onSelectCatch
     }
 
-    private var sortedCatches: [CatchModel] {
-        switch selectedSort {
-        case .latest:
-            return allCatches.sorted { $0.capturedAt > $1.capturedAt }
-        case .weight:
-            return allCatches.sorted { $0.weight > $1.weight }
-        case .length:
-            return allCatches.sorted { $0.length > $1.length }
-        }
-    }
-
     private let columns = [
         GridItem(.flexible(), spacing: 18),
         GridItem(.flexible(), spacing: 18),
@@ -37,7 +26,7 @@ struct HistoryView: View {
     ]
 
     var body: some View {
-        let catches = sortedCatches
+        let catches = viewModel.sortedCatches(allCatches)
         VStack {
             header
                 .padding(.horizontal, 20)
@@ -74,7 +63,7 @@ struct HistoryView: View {
             HStack {
                 Spacer()
 
-                SortButton(selectedSort: $selectedSort)
+                SortButton(selectedSort: $viewModel.selectedSort)
             }
         }
         .frame(height: 40)
@@ -128,15 +117,14 @@ struct HistoryView: View {
                 )
 
             Text(item.species.uppercased())
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(.black)
+                .font(.captionRegular)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
                 .padding(.top, 8)
 
-            Text(bottomText(for: item))
+            Text(viewModel.bottomText(for: item))
                 .font(.system(size: 10))
-                .foregroundStyle(.black.opacity(0.58))
+                .foregroundStyle(Color.neutralColorPrimaryBlack50)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
         }
@@ -144,23 +132,6 @@ struct HistoryView: View {
         .onTapGesture {
             onSelectCatch(item)
         }
-    }
-
-    private func bottomText(for item: CatchModel) -> String {
-        switch selectedSort {
-        case .latest:
-            return item.capturedAt.formatted(date: .numeric, time: .omitted)
-        case .weight:
-            return "\(formattedWeight(item.weight)) kg"
-        case .length:
-            return String(format: "%.0f cm", item.length)
-        }
-    }
-
-    private func formattedWeight(_ weight: Double) -> String {
-        weight < 1
-            ? String(format: "%.2f", weight)
-            : String(format: "%.1f", weight)
     }
 }
 

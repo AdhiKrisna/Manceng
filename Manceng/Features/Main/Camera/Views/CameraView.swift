@@ -12,10 +12,6 @@ struct CameraView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var viewModel = CameraViewModel()
-    @AppStorage("hasSeenCameraGuide") private var hasSeenCameraGuide = false
-    @State private var showCameraGuide = false
-    @State private var shouldShowARCoaching = true
-    @State private var arCoachingTask: Task<Void, Never>?
     
     /// Dipanggil saat user menekan Save di review — hasil tangkapan dikirim ke beranda.
     var onSave: (CatchModel) -> Void = { _ in }
@@ -25,7 +21,7 @@ struct CameraView: View {
             if viewModel.cameraPermissionState.canUseCamera {
                 ARCameraContainer(
                     service: viewModel.arService,
-                    isCoachingVisible: shouldShowARCoaching && !showCameraGuide
+                    isCoachingVisible: viewModel.isARCoachingVisible
                 )
                     .ignoresSafeArea()
 
@@ -51,14 +47,14 @@ struct CameraView: View {
             .padding(.horizontal, 20)
 
             if viewModel.cameraPermissionState.canUseCamera,
-               !shouldShowARCoaching,
-               !showCameraGuide {
+               !viewModel.shouldShowARCoaching,
+               !viewModel.showCameraGuide {
                 centerInstruction
             }
 
             if viewModel.cameraPermissionState.canUseCamera,
-               !shouldShowARCoaching,
-               !showCameraGuide,
+               !viewModel.shouldShowARCoaching,
+               !viewModel.showCameraGuide,
                let imageSize = viewModel.scannedImage?.size,
                let boundingBox = viewModel.focusedFishBoundingBox {
                 FishScanCornerGuide(
@@ -68,12 +64,15 @@ struct CameraView: View {
                 .allowsHitTesting(false)
             }
 
-            if showCameraGuide, viewModel.cameraPermissionState.canUseCamera {
-                CameraGuideView(isPresented: $showCameraGuide)
+            if viewModel.showCameraGuide, viewModel.cameraPermissionState.canUseCamera {
+                CameraGuideView(isPresented: Binding(
+                    get: { viewModel.showCameraGuide },
+                    set: { viewModel.setCameraGuidePresented($0) }
+                ))
                     .transition(.opacity)
             }
         }
-        .animation(.easeInOut(duration: 0.25), value: showCameraGuide)
+        .animation(.easeInOut(duration: 0.25), value: viewModel.showCameraGuide)
         .navigationBarBackButtonHidden()
         .fullScreenCover(isPresented: $viewModel.showReview) {
             CatchReviewView(
@@ -86,39 +85,27 @@ struct CameraView: View {
             )
         }
         .onDisappear {
-            arCoachingTask?.cancel()
-            viewModel.stopScanning()
-            viewModel.arService.stop()
+            viewModel.onDisappear()
         }
         .task {
             await viewModel.prepareCameraPermission()
         }
         .task(id: viewModel.cameraPermissionState) {
             if viewModel.cameraPermissionState.canUseCamera {
-                presentCameraGuideIfNeeded()
-                if !showCameraGuide {
-                    startARCoachingGate()
+                viewModel.presentCameraGuideIfNeeded()
+                if !viewModel.showCameraGuide {
+                    viewModel.startARCoachingGate()
                 }
                 await viewModel.startScanning()
             } else {
-                arCoachingTask?.cancel()
-                shouldShowARCoaching = true
+                viewModel.stopARCoachingGate()
                 viewModel.stopScanning()
                 viewModel.arService.stop()
             }
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
-                viewModel.refreshPermissionState()
-                if viewModel.cameraPermissionState.canUseCamera, !viewModel.arService.isARReady {
-                    startARCoachingGate()
-                }
-            }
-        }
-        .onChange(of: showCameraGuide) { _, isPresented in
-            viewModel.setScanningPaused(isPresented)
-            if !isPresented, viewModel.cameraPermissionState.canUseCamera {
-                startARCoachingGate()
+                viewModel.handleSceneBecameActive()
             }
         }
         .alert("Camera access needed", isPresented: $viewModel.showPermissionAlert) {
@@ -141,45 +128,31 @@ struct CameraView: View {
             Spacer()
 
             CircleIconButton(systemName: "info") {
-                viewModel.setScanningPaused(true)
-                showCameraGuide = true
+                viewModel.presentCameraGuide()
             }
-        }
-    }
-
-    private func presentCameraGuideIfNeeded() {
-        guard !hasSeenCameraGuide else { return }
-        hasSeenCameraGuide = true
-        viewModel.setScanningPaused(true)
-        showCameraGuide = true
-    }
-
-    private func startARCoachingGate() {
-        arCoachingTask?.cancel()
-        shouldShowARCoaching = true
-
-        arCoachingTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 3_000_000_000)
-
-            while !viewModel.arService.isARReady, !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 120_000_000)
-            }
-
-            guard !Task.isCancelled else { return }
-            shouldShowARCoaching = false
         }
     }
 
     private var centerInstruction: some View {
-        Text(viewModel.centerInstructionText)
-            .font(.system(size: 18, weight: .bold))
-            .foregroundStyle(.white)
-            .multilineTextAlignment(.center)
-            .lineSpacing(4)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
-            .background(.black.opacity(0.42), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .shadow(radius: 4)
+        VStack(spacing: 6) {
+            Text(viewModel.centerInstructionText)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+                .lineSpacing(4)
+
+            if let statusText = viewModel.centerInstructionStatusText {
+                Text(statusText)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
+        .background(.black.opacity(0.42), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .shadow(radius: 4)
     }
 
     private var permissionBackground: some View {
@@ -261,19 +234,55 @@ struct CameraView: View {
     }
 
     private var captureLoadingIndicator: some View {
-        HStack(spacing: 10) {
-            ProgressView()
-                .tint(.white)
+        CaptureScanningIndicator()
+    }
+}
 
-            Text("Analyzing your catch...")
+private struct CaptureScanningIndicator: View {
+    @State private var phoneOffset: CGFloat = -18
+    @State private var scanOpacity = false
+    @State private var scanScale: CGFloat = 0.88
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .fill(Color.white.opacity(scanOpacity ? 0.82 : 0.26))
+                    .frame(width: 58, height: 3)
+                    .scaleEffect(x: scanScale, anchor: .center)
+
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(Color.white.opacity(0.92), lineWidth: 2)
+                    .frame(width: 28, height: 46)
+                    .overlay(alignment: .top) {
+                        Capsule()
+                            .fill(Color.white.opacity(0.75))
+                            .frame(width: 10, height: 2)
+                            .padding(.top, 5)
+                    }
+                    .offset(x: phoneOffset)
+            }
+            .frame(width: 88, height: 54)
+
+            Text("Scanning fish image")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white)
                 .lineLimit(2)
-                .multilineTextAlignment(.center)
+                .multilineTextAlignment(.leading)
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.vertical, 8)
         .background(.black.opacity(0.48), in: Capsule())
+        .onAppear {
+            withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
+                phoneOffset = 18
+            }
+
+            withAnimation(.easeInOut(duration: 0.45).repeatForever(autoreverses: true)) {
+                scanOpacity = true
+                scanScale = 1.08
+            }
+        }
     }
 }
 

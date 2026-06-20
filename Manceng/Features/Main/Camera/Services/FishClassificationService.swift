@@ -15,19 +15,22 @@ struct FishClassificationResult {
 
 final class FishClassificationService: @unchecked Sendable {
     private static let minimumConfidence = 0.5
+    private static let modelResourceName = "ClassificationModel-V2"
+    private static let inputImageSize = 224
+    private static let inputPixelFormat = kCVPixelFormatType_32ARGB
     private let model: MLModel?
 
     init(bundle: Bundle = .main) {
         let configuration = MLModelConfiguration()
         configuration.computeUnits = .all
 
-        if let compiledURL = bundle.url(forResource: "ClassificationModel-V1", withExtension: "mlmodelc"),
+        if let compiledURL = bundle.url(forResource: Self.modelResourceName, withExtension: "mlmodelc"),
            let loaded = try? MLModel(contentsOf: compiledURL, configuration: configuration) {
             model = loaded
             return
         }
 
-        if let modelURL = bundle.url(forResource: "ClassificationModel-V1", withExtension: "mlmodel"),
+        if let modelURL = bundle.url(forResource: Self.modelResourceName, withExtension: "mlmodel"),
            let compiledURL = try? MLModel.compileModel(at: modelURL),
            let loaded = try? MLModel(contentsOf: compiledURL, configuration: configuration) {
             model = loaded
@@ -35,7 +38,7 @@ final class FishClassificationService: @unchecked Sendable {
         }
 
         model = nil
-        print("[FishClassificationService] ClassificationModel-V1 was not found in the app bundle")
+        print("[FishClassificationService] \(Self.modelResourceName) was not found in the app bundle")
     }
 
     func classify(image: UIImage, boundingBox: CGRect) -> FishClassificationResult? {
@@ -44,9 +47,9 @@ final class FishClassificationService: @unchecked Sendable {
               let cgImage = croppedImage.cgImage,
               let inputValue = try? MLFeatureValue(
                 cgImage: cgImage,
-                pixelsWide: 360,
-                pixelsHigh: 360,
-                pixelFormatType: kCVPixelFormatType_32BGRA,
+                pixelsWide: Self.inputImageSize,
+                pixelsHigh: Self.inputImageSize,
+                pixelFormatType: Self.inputPixelFormat,
                 options: nil
               ).imageBufferValue else {
             return nil
@@ -57,11 +60,13 @@ final class FishClassificationService: @unchecked Sendable {
                 "image": MLFeatureValue(pixelBuffer: inputValue)
             ])
             let output = try model.prediction(from: provider)
-            guard let label = output.featureValue(for: "target")?.stringValue else {
+            guard let label = output.featureValue(for: "classLabel")?.stringValue
+                    ?? output.featureValue(for: "target")?.stringValue else {
                 return nil
             }
 
-            let probabilities = output.featureValue(for: "targetProbability")?.dictionaryValue
+            let probabilities = output.featureValue(for: "var_930")?.dictionaryValue
+                ?? output.featureValue(for: "targetProbability")?.dictionaryValue
             let confidence = probabilities?[label]?.doubleValue ?? 0
             guard confidence >= Self.minimumConfidence else {
                 return nil

@@ -28,7 +28,7 @@ struct SortButton: View {
                         Text(option.rawValue)
 
                         if selectedSort == option {
-                            Image(systemName: "checkmark")
+                            Image(systemName: "checkmark").foregroundStyle(Color.neutralColorPrimaryBlack1)
                         }
                     }
                 }

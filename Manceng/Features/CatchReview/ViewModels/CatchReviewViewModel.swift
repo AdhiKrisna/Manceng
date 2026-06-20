@@ -6,23 +6,37 @@
 //
 
 import Combine
+import SwiftData
 import UIKit
+import Vision
 
 @MainActor
 final class CatchReviewViewModel: ObservableObject {
     let image: UIImage?
     let reviewFishImage: UIImage?
     let savedFishImage: UIImage?
+    @Published var showLocationSettingsAlert: Bool
+    @Published var showShareTemplate = false
+    private let locationMetadata: CatchLocationMetadata?
     private let primaryFish: DetectedFish?
+    private var savedCatchModel: CatchModel?
 
     var fishName: String {
         primaryFish?.species ?? "Unfortunately, we couldn't identify this fish"
     }
 
     var weightText: String {
-        weightValue < 1
+        if shouldDisplayWeightInGrams {
+            return String(format: "%.0f", weightValue * 1000)
+        }
+
+        return weightValue < 1
             ? String(format: "%.2f", weightValue)
             : String(format: "%.1f", weightValue)
+    }
+
+    var weightUnitText: String {
+        shouldDisplayWeightInGrams ? "grams" : "kg"
     }
 
     var lengthText: String {
@@ -37,19 +51,83 @@ final class CatchReviewViewModel: ObservableObject {
         primaryFish?.estimatedWeightKg ?? 0
     }
 
-    init(image: UIImage?, segmentedFishes: [SegmentedFish]) {
+    private var shouldDisplayWeightInGrams: Bool {
+        let grams = weightValue * 1000
+        return grams > 0 && grams < 100
+    }
+
+    var locationDisplayText: String {
+        locationMetadata?.displayName ?? "Unknown"
+    }
+
+    init(
+        image: UIImage?,
+        segmentedFishes: [SegmentedFish],
+        locationMetadata: CatchLocationMetadata?,
+        shouldPromptLocationSettings: Bool
+    ) {
         self.image = image
+        self.locationMetadata = locationMetadata
+        self.showLocationSettingsAlert = shouldPromptLocationSettings
         let primarySegmentedFish = segmentedFishes.max { $0.fish.confidence < $1.fish.confidence }
         self.primaryFish = primarySegmentedFish?.fish
 
-        if let image, let maskImage = primarySegmentedFish?.maskImage {
-            let maskedImages = Self.makeMaskedFishImages(image: image, maskImage: maskImage)
+        if let image, let primarySegmentedFish {
+            let maskedImages = Self.makeMaskedFishImages(
+                image: image,
+                maskImage: primarySegmentedFish.maskImage,
+                boundingBox: primarySegmentedFish.fish.boundingBox
+            )
             self.reviewFishImage = maskedImages.review
             self.savedFishImage = maskedImages.saved
         } else {
             self.reviewFishImage = nil
             self.savedFishImage = nil
         }
+    }
+
+    func persistCatchIfNeeded(modelContext: ModelContext) -> CatchModel? {
+        if let savedCatchModel {
+            return savedCatchModel
+        }
+
+        let catchModel = makeCatchModel()
+        modelContext.insert(catchModel)
+
+        do {
+            try modelContext.save()
+            savedCatchModel = catchModel
+            return catchModel
+        } catch {
+            print("Failed to save catch: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    func shareCatch(modelContext: ModelContext) {
+        guard persistCatchIfNeeded(modelContext: modelContext) != nil else { return }
+        showShareTemplate = true
+    }
+
+    func openSettings() {
+        guard let settingsURL = URL(string: UIApplication.openSettingsURLString),
+              UIApplication.shared.canOpenURL(settingsURL) else {
+            return
+        }
+
+        UIApplication.shared.open(settingsURL)
+    }
+
+    private func makeCatchModel() -> CatchModel {
+        CatchModel(
+            image: savedFishImage ?? image ?? UIImage(),
+            species: fishName,
+            weight: weightValue,
+            length: lengthValue,
+            location: locationDisplayText,
+            latitude: locationMetadata?.latitude,
+            longitude: locationMetadata?.longitude
+        )
     }
 
     private struct PixelImage {
@@ -60,7 +138,8 @@ final class CatchReviewViewModel: ObservableObject {
 
     private static func makeMaskedFishImages(
         image: UIImage,
-        maskImage: UIImage
+        maskImage: UIImage,
+        boundingBox: CGRect
     ) -> (review: UIImage?, saved: UIImage?) {
         let imageSize = image.size
         guard imageSize.width > 0, imageSize.height > 0 else { return (nil, nil) }
@@ -82,8 +161,14 @@ final class CatchReviewViewModel: ObservableObject {
 
         guard cropRect.width > 1, cropRect.height > 1 else { return (nil, nil) }
 
-        guard let cutout = cutoutPixels(
+        guard let fallbackCutout = cutoutPixels(
             imagePixels: imagePixels,
+            maskPixels: maskPixels,
+            sourceWidth: canvasWidth,
+            cropRect: cropRect
+        ),
+        let maskCutout = cutoutPixels(
+            imagePixels: maskPixels,
             maskPixels: maskPixels,
             sourceWidth: canvasWidth,
             cropRect: cropRect
@@ -91,7 +176,14 @@ final class CatchReviewViewModel: ObservableObject {
             return (nil, nil)
         }
 
-        let reviewPixels = displayCorrectedPixels(from: cutout)
+        let correctedMaskPixels = displayCorrectedPixels(from: maskCutout)
+        let cutout = visionForegroundCutout(from: image, boundingBox: boundingBox)
+            ?? fallbackCutout
+        let correctedPixels = displayCorrectedPixels(from: cutout)
+        let reviewPixels = rotateHeadToLeft(
+            imagePixels: correctedPixels,
+            maskPixels: correctedMaskPixels
+        )
         let savedPixels = rotateCounterClockwise(reviewPixels)
         return (makeImage(from: reviewPixels), makeImage(from: savedPixels))
     }
@@ -117,6 +209,100 @@ final class CatchReviewViewModel: ObservableObject {
         UIGraphicsPopContext()
 
         return pixels
+    }
+
+    private static func visionForegroundCutout(
+        from image: UIImage,
+        boundingBox: CGRect
+    ) -> PixelImage? {
+        guard #available(iOS 17.0, *),
+              let croppedImage = cropImage(image, normalizedBoundingBox: boundingBox),
+              let cgImage = croppedImage.cgImage else {
+            return nil
+        }
+
+        do {
+            let request = VNGenerateForegroundInstanceMaskRequest()
+            let handler = VNImageRequestHandler(
+                cgImage: cgImage,
+                orientation: cgImagePropertyOrientation(from: croppedImage.imageOrientation),
+                options: [:]
+            )
+            try handler.perform([request])
+
+            guard let observation = request.results?.first else { return nil }
+            let outputBuffer = try observation.generateMaskedImage(
+                ofInstances: observation.allInstances,
+                from: handler,
+                croppedToInstancesExtent: true
+            )
+
+            return pixelImage(from: outputBuffer)
+        } catch {
+            return nil
+        }
+    }
+
+    private static func cgImagePropertyOrientation(
+        from imageOrientation: UIImage.Orientation
+    ) -> CGImagePropertyOrientation {
+        switch imageOrientation {
+        case .up: return .up
+        case .upMirrored: return .upMirrored
+        case .down: return .down
+        case .downMirrored: return .downMirrored
+        case .left: return .left
+        case .leftMirrored: return .leftMirrored
+        case .right: return .right
+        case .rightMirrored: return .rightMirrored
+        @unknown default: return .up
+        }
+    }
+
+    private static func cropImage(
+        _ image: UIImage,
+        normalizedBoundingBox: CGRect
+    ) -> UIImage? {
+        guard let cgImage = image.cgImage else { return nil }
+
+        let imageWidth = CGFloat(cgImage.width)
+        let imageHeight = CGFloat(cgImage.height)
+        let padding: CGFloat = 0.12
+        let rawRect = CGRect(
+            x: normalizedBoundingBox.minX * imageWidth,
+            y: (1 - normalizedBoundingBox.maxY) * imageHeight,
+            width: normalizedBoundingBox.width * imageWidth,
+            height: normalizedBoundingBox.height * imageHeight
+        )
+        let paddedRect = rawRect
+            .insetBy(dx: -rawRect.width * padding, dy: -rawRect.height * padding)
+            .intersection(CGRect(x: 0, y: 0, width: imageWidth, height: imageHeight))
+            .integral
+
+        guard paddedRect.width > 1,
+              paddedRect.height > 1,
+              let croppedCGImage = cgImage.cropping(to: paddedRect) else {
+            return nil
+        }
+
+        return UIImage(cgImage: croppedCGImage, scale: image.scale, orientation: image.imageOrientation)
+    }
+
+    private static func pixelImage(from pixelBuffer: CVPixelBuffer) -> PixelImage? {
+        let ciImage = CIImage(cvPixelBuffer: pixelBuffer)
+        let context = CIContext(options: [.useSoftwareRenderer: false])
+        guard let cgImage = context.createCGImage(ciImage, from: ciImage.extent) else {
+            return nil
+        }
+
+        let image = UIImage(cgImage: cgImage, scale: 1, orientation: .up)
+        let width = max(1, cgImage.width)
+        let height = max(1, cgImage.height)
+        guard let pixels = rgbaPixels(from: image, width: width, height: height) else {
+            return nil
+        }
+
+        return PixelImage(pixels: pixels, width: width, height: height)
     }
 
     private static func alphaBounds(in maskPixels: [UInt8], width: Int, height: Int) -> CGRect? {
@@ -164,9 +350,15 @@ final class CatchReviewViewModel: ObservableObject {
             for x in 0..<cropWidth {
                 let sourceOffset = ((cropY + y) * sourceWidth + cropX + x) * 4
                 let destinationOffset = (y * cropWidth + x) * 4
-                let maskAlpha = maskPixels[sourceOffset + 3]
+                let maskAlpha = refinedMaskAlpha(
+                    in: maskPixels,
+                    sourceWidth: sourceWidth,
+                    sourceHeight: sourceHeight,
+                    x: cropX + x,
+                    y: cropY + y
+                )
 
-                guard maskAlpha > 127 else { continue }
+                guard maskAlpha > 8 else { continue }
 
                 outputPixels[destinationOffset] = UInt8((UInt16(imagePixels[sourceOffset]) * UInt16(maskAlpha)) / 255)
                 outputPixels[destinationOffset + 1] = UInt8((UInt16(imagePixels[sourceOffset + 1]) * UInt16(maskAlpha)) / 255)
@@ -176,6 +368,44 @@ final class CatchReviewViewModel: ObservableObject {
         }
 
         return PixelImage(pixels: outputPixels, width: cropWidth, height: cropHeight)
+    }
+
+    private static func refinedMaskAlpha(
+        in maskPixels: [UInt8],
+        sourceWidth: Int,
+        sourceHeight: Int,
+        x: Int,
+        y: Int
+    ) -> UInt8 {
+        let centerOffset = (y * sourceWidth + x) * 4
+        guard maskPixels.indices.contains(centerOffset + 3),
+              maskPixels[centerOffset + 3] > 127 else {
+            return 0
+        }
+
+        var coveredSamples = 0
+        var alphaTotal = 0
+        let radius = 2
+        let totalSamples = (radius * 2 + 1) * (radius * 2 + 1)
+
+        for sampleY in max(0, y - radius)...min(sourceHeight - 1, y + radius) {
+            for sampleX in max(0, x - radius)...min(sourceWidth - 1, x + radius) {
+                let sampleOffset = (sampleY * sourceWidth + sampleX) * 4 + 3
+                let alpha = maskPixels[sampleOffset]
+                guard alpha > 127 else { continue }
+
+                coveredSamples += 1
+                alphaTotal += Int(alpha)
+            }
+        }
+
+        guard coveredSamples >= 13 else { return 0 }
+        guard coveredSamples < totalSamples else { return maskPixels[centerOffset + 3] }
+
+        let averageAlpha = Double(alphaTotal) / Double(coveredSamples)
+        let coverage = Double(coveredSamples) / Double(totalSamples)
+        let featheredAlpha = averageAlpha * pow(coverage, 1.35)
+        return UInt8(max(0, min(255, Int(featheredAlpha.rounded()))))
     }
 
     private static func makeImage(from pixelImage: PixelImage) -> UIImage? {
@@ -203,6 +433,15 @@ final class CatchReviewViewModel: ObservableObject {
 
     private static func displayCorrectedPixels(from pixelImage: PixelImage) -> PixelImage {
         flipVertically(reviewDisplayPixels(from: pixelImage))
+    }
+
+    private static func rotateHeadToLeft(imagePixels: PixelImage, maskPixels: PixelImage) -> PixelImage {
+        guard let maskImage = makeImage(from: maskPixels),
+              let analysis = FishMaskOrientationAnalyzer.analyze(maskImage: maskImage) else {
+            return imagePixels
+        }
+
+        return rotate(imagePixels, radians: analysis.rotationToHeadLeftRadians)
     }
 
     private static func reviewDisplayPixels(from pixelImage: PixelImage) -> PixelImage {
@@ -269,5 +508,78 @@ final class CatchReviewViewModel: ObservableObject {
         }
 
         return PixelImage(pixels: rotatedPixels, width: rotatedWidth, height: rotatedHeight)
+    }
+
+    private static func rotate(_ pixelImage: PixelImage, radians: CGFloat) -> PixelImage {
+        guard abs(radians) > 0.01 else { return pixelImage }
+
+        let cosValue = cos(radians)
+        let sinValue = sin(radians)
+        let sourceCenter = CGPoint(
+            x: CGFloat(pixelImage.width - 1) / 2,
+            y: CGFloat(pixelImage.height - 1) / 2
+        )
+        let corners = [
+            CGPoint(x: 0, y: 0),
+            CGPoint(x: CGFloat(pixelImage.width - 1), y: 0),
+            CGPoint(x: 0, y: CGFloat(pixelImage.height - 1)),
+            CGPoint(x: CGFloat(pixelImage.width - 1), y: CGFloat(pixelImage.height - 1))
+        ].map { point in
+            rotatePoint(
+                CGPoint(x: point.x - sourceCenter.x, y: point.y - sourceCenter.y),
+                cosValue: cosValue,
+                sinValue: sinValue
+            )
+        }
+
+        guard let minX = corners.map(\.x).min(),
+              let maxX = corners.map(\.x).max(),
+              let minY = corners.map(\.y).min(),
+              let maxY = corners.map(\.y).max() else {
+            return pixelImage
+        }
+
+        let rotatedWidth = max(1, Int(ceil(maxX - minX)) + 1)
+        let rotatedHeight = max(1, Int(ceil(maxY - minY)) + 1)
+        var rotatedPixels = [UInt8](repeating: 0, count: rotatedWidth * rotatedHeight * 4)
+
+        for destinationY in 0..<rotatedHeight {
+            for destinationX in 0..<rotatedWidth {
+                let rotatedPoint = CGPoint(
+                    x: CGFloat(destinationX) + minX,
+                    y: CGFloat(destinationY) + minY
+                )
+                let sourceRelativePoint = rotatePoint(
+                    rotatedPoint,
+                    cosValue: cosValue,
+                    sinValue: -sinValue
+                )
+                let sourceX = Int(round(sourceRelativePoint.x + sourceCenter.x))
+                let sourceY = Int(round(sourceRelativePoint.y + sourceCenter.y))
+
+                guard sourceX >= 0,
+                      sourceX < pixelImage.width,
+                      sourceY >= 0,
+                      sourceY < pixelImage.height else {
+                    continue
+                }
+
+                let sourceOffset = (sourceY * pixelImage.width + sourceX) * 4
+                let destinationOffset = (destinationY * rotatedWidth + destinationX) * 4
+                rotatedPixels[destinationOffset] = pixelImage.pixels[sourceOffset]
+                rotatedPixels[destinationOffset + 1] = pixelImage.pixels[sourceOffset + 1]
+                rotatedPixels[destinationOffset + 2] = pixelImage.pixels[sourceOffset + 2]
+                rotatedPixels[destinationOffset + 3] = pixelImage.pixels[sourceOffset + 3]
+            }
+        }
+
+        return PixelImage(pixels: rotatedPixels, width: rotatedWidth, height: rotatedHeight)
+    }
+
+    private static func rotatePoint(_ point: CGPoint, cosValue: CGFloat, sinValue: CGFloat) -> CGPoint {
+        CGPoint(
+            x: cosValue * point.x - sinValue * point.y,
+            y: sinValue * point.x + cosValue * point.y
+        )
     }
 }

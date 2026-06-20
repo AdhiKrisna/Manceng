@@ -9,56 +9,53 @@
 import SwiftUI
 
 struct ShareTemplate: Identifiable {
-    let id = UUID()
+    enum Kind {
+        case template1
+        case template2
+        case template3
+    }
+
+    let id: Int
+    let kind: Kind
     let name: String
-    let previewImage: Image?
+    let assetName: String
     let backgroundColorHex: String
-    let cardColorHex: String
     let textColor: Color
     let accentColor: Color
 
     var backgroundColor: Color {
         Color(hex: backgroundColorHex)
     }
-
-    var cardColor: Color {
-        Color(hex: cardColorHex)
-    }
 }
 
 extension ShareTemplate {
     static let all: [ShareTemplate] = [
         ShareTemplate(
-            name: "Classic",
-            previewImage: nil,
-            backgroundColorHex: "#FFCC00",
-            cardColorHex: "#8A8A8A",
+            id: 0,
+            kind: .template1,
+            name: "Template 1",
+            assetName: "shareTemplate1",
+            backgroundColorHex: "#DEDEDE",
             textColor: .neutralColorPrimaryBlack1,
+            accentColor: .neutralColorPrimaryBlack1
+        ),
+        ShareTemplate(
+            id: 1,
+            kind: .template2,
+            name: "Template 2",
+            assetName: "shareTemplate2",
+            backgroundColorHex: "#DEDEDE",
+            textColor: .neutralColorPrimaryBlack1,
+            accentColor: .neutralColorPrimaryBlack1
+        ),
+        ShareTemplate(
+            id: 2,
+            kind: .template3,
+            name: "Template 3",
+            assetName: "shareTemplate3",
+            backgroundColorHex: "#1E3458",
+            textColor: .white,
             accentColor: .white
-        ),
-        ShareTemplate(
-            name: "Ocean Blue",
-            previewImage: nil,
-            backgroundColorHex: "#1A6699",
-            cardColorHex: "#0F4566",
-            textColor: .white,
-            accentColor: .brandColorPrimaryYellow
-        ),
-        ShareTemplate(
-            name: "Sunset Orange",
-            previewImage: nil,
-            backgroundColorHex: "#E6661A",
-            cardColorHex: "#A8480F",
-            textColor: .white,
-            accentColor: .white
-        ),
-        ShareTemplate(
-            name: "Forest Green",
-            previewImage: nil,
-            backgroundColorHex: "#1A8033",
-            cardColorHex: "#0F5424",
-            textColor: .white,
-            accentColor: .yellow
         )
     ]
 }

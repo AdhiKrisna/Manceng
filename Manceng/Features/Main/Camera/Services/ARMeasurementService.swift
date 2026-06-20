@@ -27,6 +27,19 @@ final class ARMeasurementService: NSObject, ObservableObject {
     /// Image resolution reported by the AR camera
     private var cameraImageResolution: CGSize?
     private var hasDetectedPlane = false
+    private let minimumMeasurementDistanceMeters: Float = 0.08
+    private let maximumMeasurementDistanceMeters: Float = 1.2
+
+    private struct SurfaceHit {
+        let position: SIMD3<Float>
+        let normal: SIMD3<Float>
+        let distanceFromCamera: Float
+    }
+
+    private struct WorldRay {
+        let origin: SIMD3<Float>
+        let direction: SIMD3<Float>
+    }
 
     func attach(sceneView: ARSCNView) {
         self.sceneView = sceneView
@@ -77,6 +90,11 @@ final class ARMeasurementService: NSObject, ObservableObject {
             return arLength
         }
 
+        if let projectedLength = projectedLengthCm(for: boundingBox, imageSize: imageSize) {
+            isUsingFallbackMeasurement = false
+            return projectedLength
+        }
+
         measurementGuidance = "Find a nearby surface to measure"
         isUsingFallbackMeasurement = true
         return nil
@@ -99,8 +117,15 @@ final class ARMeasurementService: NSObject, ObservableObject {
 
         let firstPoint: CGPoint
         let secondPoint: CGPoint
+        let centerPoint = CGPoint(
+            x: imageFrame.minX + boundingBox.midX * imageFrame.width,
+            y: imageFrame.minY + (1 - boundingBox.midY) * imageFrame.height
+        )
 
-        if boundingBox.width >= boundingBox.height {
+        let widthPixels = boundingBox.width * imageSize.width
+        let heightPixels = boundingBox.height * imageSize.height
+
+        if widthPixels >= heightPixels {
             let minX = imageFrame.minX + boundingBox.minX * imageFrame.width
             let maxX = imageFrame.minX + boundingBox.maxX * imageFrame.width
             let midY = imageFrame.minY + (1 - boundingBox.midY) * imageFrame.height
@@ -117,30 +142,159 @@ final class ARMeasurementService: NSObject, ObservableObject {
         }
 
         guard hasDetectedPlane,
-              let first = worldPosition(from: firstPoint, in: sceneView),
-              let second = worldPosition(from: secondPoint, in: sceneView) else {
+              let surface = surfaceHit(from: centerPoint, in: sceneView),
+              let cameraPosition = currentCameraPosition(in: sceneView),
+              let firstRay = worldRay(from: firstPoint, in: sceneView),
+              let secondRay = worldRay(from: secondPoint, in: sceneView),
+              let first = intersection(of: firstRay, withPlaneAt: surface.position, normal: surface.normal),
+              let second = intersection(of: secondRay, withPlaneAt: surface.position, normal: surface.normal) else {
+            return nil
+        }
+
+        guard surface.distanceFromCamera >= minimumMeasurementDistanceMeters,
+              surface.distanceFromCamera <= maximumMeasurementDistanceMeters else {
+            measurementGuidance = surface.distanceFromCamera < minimumMeasurementDistanceMeters
+                ? "Move slightly farther from the fish"
+                : "Move closer to the fish"
+            return nil
+        }
+
+        let endpointDistanceTolerance = max(0.15, surface.distanceFromCamera * 0.45)
+        let firstDistanceDelta = abs(simd_distance(cameraPosition, first) - surface.distanceFromCamera)
+        let secondDistanceDelta = abs(simd_distance(cameraPosition, second) - surface.distanceFromCamera)
+        guard firstDistanceDelta <= endpointDistanceTolerance,
+              secondDistanceDelta <= endpointDistanceTolerance else {
+            measurementGuidance = "Align the fish on one clear surface"
             return nil
         }
 
         let lengthMeters = simd_distance(first, second)
-        guard lengthMeters.isFinite, lengthMeters > 0.01, lengthMeters < 2.5 else { return nil }
+        guard lengthMeters.isFinite, lengthMeters > 0.01, lengthMeters < 1.5 else { return nil }
         return Double(lengthMeters) * 100
     }
 
-    private func worldPosition(from point: CGPoint, in sceneView: ARSCNView) -> SIMD3<Float>? {
-        if let query = sceneView.raycastQuery(from: point, allowing: .existingPlaneInfinite, alignment: .any),
-           let result = sceneView.session.raycast(query).first {
-            let t = result.worldTransform
-            return SIMD3<Float>(t.columns.3.x, t.columns.3.y, t.columns.3.z)
+    private func projectedLengthCm(for boundingBox: CGRect, imageSize: CGSize) -> Double? {
+        guard let sceneView,
+              let focalLengthPixels,
+              let focalLengthYPixels,
+              let cameraImageResolution,
+              imageSize.width > 0,
+              imageSize.height > 0,
+              cameraImageResolution.width > 0,
+              cameraImageResolution.height > 0 else {
+            return nil
         }
 
+        let displaySize = sceneView.bounds.size
+        guard displaySize.width > 0, displaySize.height > 0 else { return nil }
+
+        let imageFrame = aspectFillFrame(imageSize: imageSize, displaySize: displaySize)
+        let centerPoint = CGPoint(
+            x: imageFrame.minX + boundingBox.midX * imageFrame.width,
+            y: imageFrame.minY + (1 - boundingBox.midY) * imageFrame.height
+        )
+
+        guard hasDetectedPlane,
+              let surface = surfaceHit(from: centerPoint, in: sceneView) else {
+            return nil
+        }
+
+        let distanceMeters = surface.distanceFromCamera
+        guard distanceMeters.isFinite,
+              distanceMeters >= minimumMeasurementDistanceMeters,
+              distanceMeters <= maximumMeasurementDistanceMeters else {
+            measurementGuidance = distanceMeters < minimumMeasurementDistanceMeters
+                ? "Move slightly farther from the fish"
+                : "Move closer to the fish"
+            return nil
+        }
+
+        let scaledFocalX = Double(focalLengthPixels) * Double(imageSize.width / cameraImageResolution.width)
+        let scaledFocalY = Double(focalLengthYPixels) * Double(imageSize.height / cameraImageResolution.height)
+        let widthPixels = Double(boundingBox.width * imageSize.width)
+        let heightPixels = Double(boundingBox.height * imageSize.height)
+
+        let lengthMeters: Double
+        if widthPixels >= heightPixels {
+            guard scaledFocalX > 0 else { return nil }
+            lengthMeters = widthPixels * Double(distanceMeters) / scaledFocalX
+        } else {
+            guard scaledFocalY > 0 else { return nil }
+            lengthMeters = heightPixels * Double(distanceMeters) / scaledFocalY
+        }
+
+        guard lengthMeters.isFinite, lengthMeters > 0.01, lengthMeters < 1.5 else {
+            return nil
+        }
+
+        return lengthMeters * 100
+    }
+
+    private func surfaceHit(from point: CGPoint, in sceneView: ARSCNView) -> SurfaceHit? {
         if let query = sceneView.raycastQuery(from: point, allowing: .existingPlaneGeometry, alignment: .any),
            let result = sceneView.session.raycast(query).first {
-            let t = result.worldTransform
-            return SIMD3<Float>(t.columns.3.x, t.columns.3.y, t.columns.3.z)
+            return surfaceHit(from: result, in: sceneView)
+        }
+
+        if let query = sceneView.raycastQuery(from: point, allowing: .estimatedPlane, alignment: .any),
+           let result = sceneView.session.raycast(query).first {
+            return surfaceHit(from: result, in: sceneView)
         }
 
         return nil
+    }
+
+    private func surfaceHit(from result: ARRaycastResult, in sceneView: ARSCNView) -> SurfaceHit? {
+        guard let cameraPosition = currentCameraPosition(in: sceneView) else { return nil }
+
+        let transform = result.worldTransform
+        let position = SIMD3<Float>(transform.columns.3.x, transform.columns.3.y, transform.columns.3.z)
+        var normal = SIMD3<Float>(transform.columns.1.x, transform.columns.1.y, transform.columns.1.z)
+        let normalLength = simd_length(normal)
+        guard normalLength > 0 else { return nil }
+        normal /= normalLength
+
+        let distance = simd_distance(cameraPosition, position)
+        guard distance.isFinite else { return nil }
+
+        return SurfaceHit(position: position, normal: normal, distanceFromCamera: distance)
+    }
+
+    private func currentCameraPosition(in sceneView: ARSCNView) -> SIMD3<Float>? {
+        guard let frame = sceneView.session.currentFrame else { return nil }
+        let cameraTransform = frame.camera.transform
+        return SIMD3<Float>(
+            cameraTransform.columns.3.x,
+            cameraTransform.columns.3.y,
+            cameraTransform.columns.3.z
+        )
+    }
+
+    private func worldRay(from point: CGPoint, in sceneView: ARSCNView) -> WorldRay? {
+        let nearPoint = sceneView.unprojectPoint(SCNVector3(Float(point.x), Float(point.y), 0))
+        let farPoint = sceneView.unprojectPoint(SCNVector3(Float(point.x), Float(point.y), 1))
+        let origin = SIMD3<Float>(nearPoint.x, nearPoint.y, nearPoint.z)
+        let far = SIMD3<Float>(farPoint.x, farPoint.y, farPoint.z)
+        var direction = far - origin
+        let directionLength = simd_length(direction)
+        guard directionLength > 0 else { return nil }
+        direction /= directionLength
+
+        return WorldRay(origin: origin, direction: direction)
+    }
+
+    private func intersection(
+        of ray: WorldRay,
+        withPlaneAt planePoint: SIMD3<Float>,
+        normal: SIMD3<Float>
+    ) -> SIMD3<Float>? {
+        let denominator = simd_dot(ray.direction, normal)
+        guard abs(denominator) > 0.0001 else { return nil }
+
+        let distance = simd_dot(planePoint - ray.origin, normal) / denominator
+        guard distance.isFinite, distance > 0 else { return nil }
+
+        return ray.origin + ray.direction * distance
     }
 
     // MARK: - Distance estimation
@@ -204,26 +358,26 @@ final class ARMeasurementService: NSObject, ObservableObject {
     private func guidance(for trackingState: ARCamera.TrackingState, hasPlane: Bool, distance: Double?) -> String {
         switch trackingState {
         case .notAvailable:
-            return "Move iPhone to start"
+            return "Move your phone to start"
         case .limited(let reason):
             switch reason {
             case .excessiveMotion:
-                return "Move iPhone more slowly"
+                return "Move your phone more slowly"
             case .insufficientFeatures:
                 return "Find a nearby surface to measure"
             case .initializing:
-                return "Move iPhone to start"
+                return "Move your phone slowly to start scanning the surface"
             case .relocalizing:
-                return "Keep moving iPhone"
+                return "Keep moving your phone to scan the surface"
             @unknown default:
-                return "Move iPhone to improve tracking"
+                return "Move your phone to improve tracking"
             }
         case .normal:
             guard hasPlane else {
                 return "Find a nearby surface to measure"
             }
             
-            return "Keep the fish head on the left and tail on the right"
+            return "Turn the fish so its head faces left"
         }
     }
 
