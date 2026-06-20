@@ -2,7 +2,8 @@
   "data" : [
     {
       "filename" : "onlyonefish.gif",
-      "idiom" : "universal"
+      "idiom" : "universal",
+      "universal-type-identifier" : "com.compuserve.gif"
     }
   ],
   "info" : {

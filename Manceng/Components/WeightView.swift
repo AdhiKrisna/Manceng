@@ -31,11 +31,20 @@ struct WeightView: View {
 
     private var capWidth: CGFloat { diameter * visibleFraction }
 
+    /// Di bawah 100 gram tampilkan dalam satuan gram supaya angka tidak
+    /// muncul sebagai "0.0 kg" / "0.1 kg" yang kurang informatif.
+    private var displayInGrams: Bool { weight < 0.1 }
+
     private var displayWeight: String {
-        weight.truncatingRemainder(dividingBy: 1) == 0
+        if displayInGrams {
+            return String(Int((weight * 1000).rounded()))
+        }
+        return weight.truncatingRemainder(dividingBy: 1) == 0
             ? String(Int(weight))
             : String(format: "%.1f", weight)
     }
+
+    private var displayUnit: String { displayInGrams ? "g" : "kg" }
 
     var body: some View {
         ZStack {
@@ -56,7 +65,7 @@ struct WeightView: View {
                     .minimumScaleFactor(0.4)
                     .lineLimit(1)
 
-                Text("kg")
+                Text(displayUnit)
                     .font(.system(size: diameter / 12, weight: .medium, design: .default))
                     .foregroundColor(.black)
             }

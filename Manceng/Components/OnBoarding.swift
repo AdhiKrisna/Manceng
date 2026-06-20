@@ -13,27 +13,46 @@ struct OnBoarding: View {
     let title: String
     let caption: String
     let imageSize: CGSize?
+    let containerSize: CGSize?
     
-    init(image: Image, title: String, caption: String, imageSize: CGSize? = nil) {
+    init(image: Image, title: String, caption: String, imageSize: CGSize? = nil, containerSize: CGSize? = nil) {
         self.image = image
         self.title = title
         self.caption = caption
         self.imageSize = imageSize
+        self.containerSize = containerSize
     }
     
     var body: some View {
         VStack(spacing: 0) {
             // Gambar full-width (edge-to-edge), scaledToFit agar utuh seperti desain.
-            if let size = imageSize {
-                image
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: size.width, height: size.height)
+            if let containerSize = containerSize {
+                ZStack {
+                    if let size = imageSize {
+                        image
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: size.width, height: size.height)
+                    } else {
+                        image
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+                .frame(width: containerSize.width, height: containerSize.height)
             } else {
-                image
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxWidth: .infinity)
+                if let size = imageSize {
+                    image
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: size.width, height: size.height)
+                } else {
+                    image
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: .infinity)
+                }
             }
 
             Spacer().frame(height: 105)
@@ -48,6 +67,7 @@ struct OnBoarding: View {
                     .font(.captionRegular)
                     .foregroundColor(.neutralColorPrimaryBlack1)
                     .multilineTextAlignment(.center)
+                    .frame(width: 363)
             }
             .padding(.horizontal, 32)
         }
@@ -60,7 +80,8 @@ struct OnBoarding: View {
             image: Image("onboarding"),
             title: "FiShare",
             caption: "Welcome Angler!\nidentify your catch instantly with AR-powered camera technology. Fast, easy and fun.",
-            imageSize: CGSize(width: 190.75, height: 202.87)
+            imageSize: CGSize(width: 190.75, height: 202.87),
+            containerSize: CGSize(width: 363, height: 441)
         )
     }
 }

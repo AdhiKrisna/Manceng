@@ -40,7 +40,7 @@ final class Model3DMotionManager: ObservableObject {
     private let motionManager = CMMotionManager()
 
     /// Faktor low-pass filter (0...1). Makin kecil = makin halus tapi makin "berat"/lambat.
-    private let smoothing = 0.25
+    private let smoothing = 0.12
 
     /// Pose referensi (titik nol), supaya nilai yang dipublish adalah DELTA
     /// kemiringan dari posisi awal user memegang device (bukan nilai absolut —

@@ -25,7 +25,8 @@ struct OnBoardingView: View {
                         image: Image(item.image),
                         title: item.title,
                         caption: item.caption,
-                        imageSize: item.image == "onboarding" ? CGSize(width: 190.75, height: 202.87) : nil
+                        imageSize: item.image == "onboarding" ? CGSize(width: 190.75, height: 202.87) : nil,
+                        containerSize: item.image == "onboarding" ? CGSize(width: 363, height: 441) : nil
                     )
                     .tag(index)
                 }

@@ -65,7 +65,7 @@ struct CameraGuideView: View {
         }
         .frame(height: onContinue == nil ? 440 : 500)
         .background(
-            Color.black.opacity(0.6)
+            Color.white.opacity(0.6)
                 .background(.ultraThinMaterial.opacity(0.35))
         )
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
@@ -92,13 +92,13 @@ struct CameraGuideView: View {
             ZStack {
                 if item.showsPhone {
                     GifImageView(name: "fishposition")
-                        .frame(width: 243, height: 97)
-                        .shadow(color: Color.neutralColorPrimaryWhite.opacity(0.6), radius: 18)
+                        .frame(width: 20, height: 20)
+                        .shadow(color: Color.neutralColorPrimaryWhite.opacity(0.6), radius: 12)
                         .offset(y: fishBob)
                 } else {
                     GifImageView(name: "onlyonefish")
-                        .frame(width: 243, height: 97)
-                        .shadow(color: Color.neutralColorPrimaryWhite.opacity(0.6), radius: 18)
+                        .frame(width: 20, height: 20)
+                        .shadow(color: Color.neutralColorPrimaryWhite.opacity(0.6), radius: 12)
                         .offset(y: fishBob)
                 }
             }

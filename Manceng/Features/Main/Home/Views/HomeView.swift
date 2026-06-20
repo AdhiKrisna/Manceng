@@ -87,7 +87,6 @@ struct HomeView: View {
             if showRuler, let c = currentCatch {
                 HStack {
                     RulerView(maxCm: max(1, Int(c.length.rounded())))
-                        .padding(.leading, 8)
                     Spacer()
                 }
                 .allowsHitTesting(false)
@@ -129,53 +128,103 @@ struct HomeView: View {
         }
     }
 
-    // Carousel ikan: paging (center) + ikan tetangga tampil samar (preview).
-    // `fishPeek` = seberapa banyak ikan berikutnya mengintip di tepi.
-    //   Makin BESAR = ikan berikutnya makin dekat/terlihat. Makin KECIL = makin jauh.
-    private var fishPeek: CGFloat {
-        if selectedSort == .latest {
-            return 0
-        } else {
-            return 130
-        }
-    }
-
     private var fishCarousel: some View {
         GeometryReader { geo in
-            let itemWidth = geo.size.width - fishPeek * 2
-
+            fishScrollView(geo: geo)
+        }
+    }
+    
+    @ViewBuilder
+    private func fishScrollView(geo: GeometryProxy) -> some View {
+        ZStack {
+            let currentFishPeek = calculateCurrentFishPeek(screenWidth: geo.size.width)
+            let itemWidth = geo.size.width - currentFishPeek * 2
+            
             ScrollView(.horizontal) {
                 HStack(spacing: 0) {
+                    if selectedSort == .length {
+                        Color.clear.frame(width: currentFishPeek)
+                    }
+                    
                     ForEach(displayedCatches) { c in
                         let lengthCm = max(1, Int(c.length.rounded()))
                         let fishHeight = min(max(CGFloat(lengthCm) * 7, 340), 520)
-
-                        Image(uiImage: c.image)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(height: fishHeight)
-                            .rotation3DEffect(rotationAngle, axis: (x: 0, y: 1, z: 0))
-                            // Lebar slot tetap + tinggi penuh → ikan center horizontal & vertikal.
-                            .frame(width: itemWidth, height: geo.size.height)
-                            .scrollTransition { content, phase in
-                                content
-                                    .opacity(selectedSort != .latest ? (phase.isIdentity ? 1 : 0.6) : 1)
-                                    .scaleEffect(selectedSort != .latest ? (phase.isIdentity ? 1 : 0.82) : 1)
+                        let isActive = currentCatchID == c.id
+                        
+                        VStack(spacing: 0) {
+                            Image(uiImage: c.image)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(height: fishHeight)
+                                .rotation3DEffect(rotationAngle, axis: (x: 0, y: 1, z: 0))
+                                .shadow(color: isActive ? .black.opacity(0.35) : .clear, radius: isActive ? 18 : 0, x: 0, y: isActive ? 30 : 0)
+                            
+                            if isActive {
+                                Ellipse()
+                                    .fill(.black.opacity(0.22))
+                                    .blur(radius: 16)
+                                    .frame(width: 210, height: 34)
+                                    .padding(.top, 18)
                             }
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                detailCatch = c
-                                showDetail = true
-                            }
+                        }
+                        .frame(width: itemWidth, height: geo.size.height)
+                        .scrollTransition { content, phase in
+                            content.opacity(phase.isIdentity ? 1 : getScrollTransitionOpacity(for: selectedSort))
+                                .scaleEffect(phase.isIdentity ? 1 : getScrollTransitionScale(for: selectedSort))
+                                .offset(y: phase.isIdentity ? 0 : getScrollTransitionYOffset(for: selectedSort))
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            detailCatch = c
+                            showDetail = true
+                        }
+                    }
+                    
+                    if selectedSort == .length {
+                        Color.clear.frame(width: currentFishPeek)
                     }
                 }
                 .scrollTargetLayout()
             }
-            // Margin kiri-kanan = fishPeek → item ter-snap tepat di TENGAH.
-            .contentMargins(.horizontal, fishPeek, for: .scrollContent)
+            .contentMargins(.horizontal, currentFishPeek, for: .scrollContent)
             .scrollTargetBehavior(.viewAligned)
             .scrollPosition(id: $currentCatchID)
             .scrollIndicators(.hidden)
+            .animation(.spring(response: 0.4, dampingFraction: 0.85, blendDuration: 0), value: currentCatchID)
+        }
+    }
+    
+    private func calculateCurrentFishPeek(screenWidth: CGFloat) -> CGFloat {
+        if selectedSort == .latest {
+            return 0
+        } else if selectedSort == .length {
+            return screenWidth * 0.25
+        } else {
+            return 130
+        }
+    }
+    
+    private func getScrollTransitionOpacity(for sort: SortOption) -> Double {
+        switch sort {
+        case .latest: return 1
+        case .weight: return 0.4
+        case .length: return 0.5
+        }
+    }
+    
+    private func getScrollTransitionScale(for sort: SortOption) -> Double {
+        switch sort {
+        case .latest: return 1
+        case .weight: return 0.82
+        case .length: return 0.85
+        }
+    }
+    
+    private func getScrollTransitionYOffset(for sort: SortOption) -> CGFloat {
+        switch sort {
+        case .latest: return 0
+        case .weight: return 0
+        case .length: return 10
         }
     }
 
