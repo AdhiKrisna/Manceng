@@ -253,9 +253,10 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 3N3ZPJZ6BG;
+				DEVELOPMENT_TEAM = 55V77DK95N;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = FiShare;
 				INFOPLIST_KEY_NSCameraUsageDescription = "We need access to your camera so you can take picture of your catches and then the application going to generate the detail of your catches their detailed information.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need access to your location so you can share your fishing location according to your catches informations";
@@ -289,9 +290,10 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 3N3ZPJZ6BG;
+				DEVELOPMENT_TEAM = 55V77DK95N;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = FiShare;
 				INFOPLIST_KEY_NSCameraUsageDescription = "We need access to your camera so you can take picture of your catches and then the application going to generate the detail of your catches their detailed information.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need access to your location so you can share your fishing location according to your catches informations";

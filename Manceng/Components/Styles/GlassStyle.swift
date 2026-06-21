@@ -49,11 +49,12 @@ struct GlassCircleIcon: View {
 
 struct CircleIconButton: View {
     let systemName: String
+    var iconColor: Color = .black
     var action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            GlassCircleIcon(systemName: systemName)
+            GlassCircleIcon(systemName: systemName, iconColor: iconColor)
         }
         .buttonStyle(GlassPressStyle())
     }

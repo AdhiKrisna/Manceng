@@ -9,6 +9,7 @@
 import SwiftUI
 import UIKit
 import MessageUI
+import LinkPresentation
 
 struct ShareTemplatesView: View {
     @Environment(\.dismiss) private var dismiss
@@ -33,30 +34,28 @@ struct ShareTemplatesView: View {
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                viewModel.selectedTemplate.backgroundColor
+                Color.brandColorPrimaryYellow
                     .ignoresSafeArea()
-                    .animation(.easeInOut(duration: 0.25), value: viewModel.currentPageIndex)
 
                 VStack(spacing: 0) {
-                    header
-                        .padding(.horizontal, 20)
-                        .padding(.top, max(0, proxy.safeAreaInsets.top - 24))
+                    Spacer()
 
-                   
-                    templateCarousel(height: proxy.size.height * 0.62, screenWidth: proxy.size.width)
-                        .padding(.top, 4)
+                    templateCarousel(height: proxy.size.height * 0.66, screenWidth: proxy.size.width)
 
-                    Spacer(minLength: 8)
+                    pageDots
+                        .padding(.top, 24)
 
-                    shareSection
-                        .padding(.horizontal, 8)
-                        .padding(.bottom, 0)
+                    Spacer()
                 }
-                .ignoresSafeArea(.container, edges: .bottom)
             }
+            .overlay(alignment: .top) { header }
+            .overlay(alignment: .bottomTrailing) { shareButton }
         }
+        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
     }
 
+    // Placement mirrors CatchDetailView.topBar.
     private var header: some View {
         HStack {
             CircleIconButton(systemName: "chevron.left") {
@@ -65,6 +64,40 @@ struct ShareTemplatesView: View {
 
             Spacer()
         }
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
+    }
+
+    private var shareButton: some View {
+        Button {
+            shareSelected()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.system(size: 18, weight: .semibold))
+                Text("Share")
+                    .font(.system(size: 17, weight: .semibold))
+            }
+            .foregroundStyle(.black)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 15)
+            .glassStyle(Capsule())
+        }
+        .buttonStyle(GlassPressStyle())
+        .padding(.horizontal, 20)
+        .padding(.bottom, 24)
+    }
+
+    private var pageDots: some View {
+        let dotColor = Color.neutralColorPrimaryBlack1
+        return HStack(spacing: 8) {
+            ForEach(ShareTemplate.all.indices, id: \.self) { index in
+                Capsule()
+                    .fill(index == viewModel.currentPageIndex ? dotColor : dotColor.opacity(0.3))
+                    .frame(width: index == viewModel.currentPageIndex ? 22 : 8, height: 8)
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: viewModel.currentPageIndex)
     }
     private func templateCarousel(height: CGFloat, screenWidth: CGFloat) -> some View {
         let cardSpacing: CGFloat = 14
@@ -80,6 +113,12 @@ struct ShareTemplatesView: View {
                         content: viewModel.displayContent(for: template)
                     )
                     .frame(width: cardWidth, height: height)
+                    // Center card stays full size; side cards shrink + dim.
+                    .scrollTransition(.interactive) { content, phase in
+                        content
+                            .scaleEffect(phase.isIdentity ? 1 : 0.8)
+                            .opacity(phase.isIdentity ? 1 : 0.55)
+                    }
                     .id(index)
                 }
             }
@@ -98,30 +137,11 @@ struct ShareTemplatesView: View {
         }
     }
 
-    private var shareSection: some View {
-        VStack(spacing: 18) {
-            Text("Share section")
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(.white)
-
-            HStack(spacing: 28) {
-                ForEach(ShareChannel.allCases) { channel in
-                    ShareButton(
-                        assetName: channel.assetName,
-                        systemImage: channel.systemImage,
-                        label: channel.label,
-                        iconScale: channel.iconScale
-                    ) {
-                        share(to: channel)
-                    }
-                }
-            }
+    private func shareSelected() {
+        viewModel.shareTemplateAsImage { image in
+            guard let image else { return }
+            presentSystemShareSheet(image: image)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.top, 26)
-        .padding(.bottom, 34)
-        .background(Color.neutralColorPrimaryBlack50)
-        .clipShape(RoundedRectangle(cornerRadius: 38, style: .continuous))
     }
 
     private func share(to channel: ShareChannel) {
@@ -141,43 +161,97 @@ struct ShareTemplatesView: View {
     }
 
     private func presentSystemShareSheet(image: UIImage) {
+        // ShareImageItemSource supplies LPLinkMetadata so the sheet shows a
+        // preview card of the selected template (not just a bare thumbnail).
+        let item = ShareImageItemSource(image: image, title: viewModel.species)
         let activityVC = UIActivityViewController(
-            activityItems: [image],
+            activityItems: [item],
             applicationActivities: nil
         )
         rootViewController()?.present(activityVC, animated: true)
     }
 
+    /// Instagram Stories via pasteboard, per Meta's documented flow
+    /// (https://developers.facebook.com/docs/instagram-platform/sharing-to-stories).
     private func presentInstagram(image: UIImage) {
+        let bundleID = Bundle.main.bundleIdentifier ?? ""
+        guard
+            let storiesURL = URL(string: "instagram-stories://share?source_application=\(bundleID)"),
+            UIApplication.shared.canOpenURL(storiesURL)
+        else {
+            presentAppNotInstalledAlert(name: "Instagram", appStoreURL: Self.instagramAppStoreURL)
+            return
+        }
+
+        guard let pngData = image.pngData() else {
+            presentSystemShareSheet(image: image)
+            return
+        }
+
+        // Full-bleed template image → use it as the Stories background.
+        // ponytail: backgroundTopColor/bottomColor only matter for a transparent
+        // sticker over a solid backdrop; our image already fills the frame, so skip.
+        // ponytail: contentURL attribution omitted — no per-template URL yet
+        // (see ShareTemplate; add the link here once one exists).
+        let items: [String: Any] = [
+            "com.instagram.sharedSticker.backgroundImage": pngData
+        ]
+        UIPasteboard.general.setItems(
+            [items],
+            options: [.expirationDate: Date().addingTimeInterval(60)] // privacy: clear after 1 min
+        )
+
+        UIApplication.shared.open(storiesURL)
+    }
+
+    private func presentWhatsApp(image: UIImage) {
+        // WhatsApp can't attach an image via a URL scheme; the documented path is
+        // UIDocumentInteractionController with UTI "net.whatsapp.image". The user
+        // then picks the contact inside WhatsApp.
+        // ponytail: image-only — WhatsApp's "Open in" flow doesn't carry a caption
+        // alongside the image; text would need the separate whatsapp://send?text= scheme.
+        guard
+            let waURL = URL(string: "whatsapp://"),
+            UIApplication.shared.canOpenURL(waURL)
+        else {
+            presentAppNotInstalledAlert(name: "WhatsApp", appStoreURL: Self.whatsAppAppStoreURL)
+            return
+        }
+
         guard let root = rootViewController() else {
             presentSystemShareSheet(image: image)
             return
         }
 
+        // .wai (WhatsApp Image) + JPEG is WhatsApp's documented format — only WhatsApp
+        // declares this UTI, so the "Open in" sheet filters down to a single WhatsApp
+        // entry (effectively one tap) instead of a generic app list.
         ShareDocumentPresenter.shared.present(
             image: image,
-            fileName: "fishare-catch.igo",
-            uti: "com.instagram.exclusivegram",
+            fileName: "fishare-catch.wai",
+            uti: "net.whatsapp.image",
             from: root
         ) {
             presentSystemShareSheet(image: image)
         }
     }
 
-    private func presentWhatsApp(image: UIImage) {
-        guard let root = rootViewController() else {
-            presentSystemShareSheet(image: image)
-            return
-        }
+    private static let instagramAppStoreURL = URL(string: "https://apps.apple.com/app/instagram/id389801252")
+    private static let whatsAppAppStoreURL = URL(string: "https://apps.apple.com/app/whatsapp-messenger/id310633997")
 
-        ShareDocumentPresenter.shared.present(
-            image: image,
-            fileName: "fishare-catch.png",
-            uti: "net.whatsapp.image",
-            from: root
-        ) {
-            presentSystemShareSheet(image: image)
+    private func presentAppNotInstalledAlert(name: String, appStoreURL: URL?) {
+        let alert = UIAlertController(
+            title: "\(name) tidak ditemukan",
+            message: "Aplikasi \(name) belum terpasang di perangkat ini.",
+            preferredStyle: .alert
+        )
+        if let appStoreURL {
+            alert.addAction(UIAlertAction(title: "Buka App Store", style: .default) { _ in
+                UIApplication.shared.open(appStoreURL)
+            })
         }
+        alert.addAction(UIAlertAction(title: "Tutup", style: .cancel))
+        rootViewController()?.present(alert, animated: true)
     }
 
     private func presentMessageComposer(image: UIImage) {
@@ -248,6 +322,38 @@ enum ShareChannel: String, CaseIterable, Identifiable {
     }
 }
 
+/// Feeds the share sheet a rich preview (image + title) via LinkPresentation,
+/// while the actual shared item stays the template UIImage.
+private final class ShareImageItemSource: NSObject, UIActivityItemSource {
+    private let image: UIImage
+    private let title: String
+
+    init(image: UIImage, title: String) {
+        self.image = image
+        self.title = title
+    }
+
+    func activityViewControllerPlaceholderItem(_ controller: UIActivityViewController) -> Any {
+        image
+    }
+
+    func activityViewController(
+        _ controller: UIActivityViewController,
+        itemForActivityType activityType: UIActivity.ActivityType?
+    ) -> Any? {
+        image
+    }
+
+    func activityViewControllerLinkMetadata(_ controller: UIActivityViewController) -> LPLinkMetadata? {
+        let metadata = LPLinkMetadata()
+        metadata.title = title
+        let provider = NSItemProvider(object: image)
+        metadata.imageProvider = provider
+        metadata.iconProvider = provider
+        return metadata
+    }
+}
+
 private final class ShareMessageComposeDelegate: NSObject, MFMessageComposeViewControllerDelegate {
     static let shared = ShareMessageComposeDelegate()
 
@@ -263,6 +369,7 @@ private final class ShareDocumentPresenter: NSObject, UIDocumentInteractionContr
     static let shared = ShareDocumentPresenter()
 
     private var controller: UIDocumentInteractionController?
+    private var fileURL: URL?
 
     func present(
         image: UIImage,
@@ -280,6 +387,7 @@ private final class ShareDocumentPresenter: NSObject, UIDocumentInteractionContr
         controller.uti = uti
         controller.delegate = self
         self.controller = controller
+        self.fileURL = fileURL
 
         let sourceRect = CGRect(
             x: rootViewController.view.bounds.midX,
@@ -296,8 +404,28 @@ private final class ShareDocumentPresenter: NSObject, UIDocumentInteractionContr
 
         if !didPresent {
             fallback()
-            self.controller = nil
+            cleanup()
         }
+    }
+
+    // Release the controller and delete the temp file once the menu/app handoff ends.
+    func documentInteractionControllerDidDismissOpenInMenu(_ controller: UIDocumentInteractionController) {
+        cleanup()
+    }
+
+    func documentInteractionController(
+        _ controller: UIDocumentInteractionController,
+        didEndSendingToApplication application: String?
+    ) {
+        cleanup()
+    }
+
+    private func cleanup() {
+        if let fileURL {
+            try? FileManager.default.removeItem(at: fileURL)
+        }
+        fileURL = nil
+        controller = nil
     }
 
     private func writeImage(_ image: UIImage, fileName: String) -> URL? {

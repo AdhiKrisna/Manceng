@@ -75,7 +75,7 @@ struct CatchDetailView: View {
             .overlay(alignment: .top) { topBar }
         }
         .navigationBarBackButtonHidden(true)
-        .fullScreenCover(isPresented: $showShareTemplate) {
+        .navigationDestination(isPresented: $showShareTemplate) {
             if let catchModel = catchModel {
                 ShareTemplatesView(
                     fishImage: catchModel.image,
@@ -115,7 +115,7 @@ struct CatchDetailView: View {
                     showShareTemplate = true
                 }
                 if catchModel != nil {
-                    CircleIconButton(systemName: "trash") {
+                    CircleIconButton(systemName: "trash", iconColor: .red) {
                         showDeleteAlert = true
                     }
                 }
