@@ -70,11 +70,10 @@ struct MainView: View {
                     }
                     .padding(.horizontal, 8)
                     .padding(.vertical, 8)
-                    .background(.ultraThinMaterial)
-                    .clipShape(Capsule())
-                    .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                    .glassEffect(in: Capsule())
+                    // .glassEffect(.regular.interactive(), in: Capsule())
                     .frame(maxWidth: .infinity)
-                    
+
                     // Right Circle (Camera Action)
                     Button {
                         handleCameraTabSelection()
@@ -83,14 +82,12 @@ struct MainView: View {
                             .font(.system(size: 24, weight: .semibold))
                             .foregroundColor(.neutralColorPrimaryBlack1)
                             .frame(width: 60, height: 60)
-                            .background(.ultraThinMaterial)
-                            .clipShape(Circle())
-                            .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+                            .glassEffect(in: Circle())
                     }
                     .buttonStyle(GlassPressStyle())
                 }
                 .padding(.horizontal, 20)
-                .padding(.bottom, 20)
+                .padding(.bottom, 8)
                 
                 // Walkthrough
                 if showWalkthrough {
