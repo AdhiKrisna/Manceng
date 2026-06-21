@@ -10,6 +10,14 @@ import SwiftData
 import RealityKit
 import Combine
 
+/// Menyimpan sudut gyro yang sedang ditampilkan agar bisa di-ease menuju
+/// target tiap frame. Class biasa (bukan @Published) — mutasinya tidak memicu
+/// invalidasi SwiftUI; redraw sudah didorong TimelineView.
+final class GyroSmoother {
+    var rotX: Double = 0
+    var rotY: Double = 0
+}
+
 struct HomeView: View {
     @Query(sort: \CatchModel.capturedAt, order: .reverse) private var catches: [CatchModel]
 
@@ -19,6 +27,16 @@ struct HomeView: View {
     // Model 3D ikan untuk state kosong (drag saja, tanpa gyro).
     @StateObject private var model3DMotion = Model3DMotionManager()
     @State private var interaction = FishInteractionState()
+
+    // Gyro untuk efek tilt/parallax pada ikan aktif di carousel.
+    @StateObject private var carouselMotion = Model3DMotionManager()
+    @State private var gyroSmoother = GyroSmoother()
+
+    // Batas tilt gyro & penguatnya (derajat) — efek "miringkan kartu" halus.
+    private let maxTilt: Double = 14
+    private let gyroGain: Double = 1.6
+    private let gyroEasing: Double = 0.6
+    private let maxParallax: Double = 7
 
     // Navigasi ke halaman detail.
     @State private var showDetail = false
@@ -113,10 +131,31 @@ struct HomeView: View {
         }
         .onAppear {
             if currentCatchID == nil { currentCatchID = displayedCatches.first?.id }
+            carouselMotion.start()
         }
+        .onDisappear { carouselMotion.stop() }
         .onChange(of: selectedSort) { _, _ in
             currentCatchID = displayedCatches.first?.id
         }
+    }
+
+    // MARK: - Tilt gyro
+
+    /// Gyro (di-smoothing) → rotasi 3D terbatas + parallax untuk ikan aktif.
+    private func currentTilt() -> (rotX: Double, rotY: Double, parallaxX: Double, parallaxY: Double) {
+        let radToDeg = 180.0 / .pi
+        let targetX = clampTilt(carouselMotion.pitch * radToDeg * gyroGain)
+        let targetY = clampTilt(carouselMotion.roll * radToDeg * gyroGain)
+        // Low-pass kedua: ease nilai tampil menuju target tiap tick.
+        gyroSmoother.rotX += (targetX - gyroSmoother.rotX) * gyroEasing
+        gyroSmoother.rotY += (targetY - gyroSmoother.rotY) * gyroEasing
+        let rotX = gyroSmoother.rotX
+        let rotY = gyroSmoother.rotY
+        return (rotX, rotY, rotY / maxTilt * maxParallax, -rotX / maxTilt * maxParallax)
+    }
+
+    private func clampTilt(_ value: Double) -> Double {
+        min(max(value, -maxTilt), maxTilt)
     }
 
     private var fishCarousel: some View {
@@ -147,26 +186,7 @@ struct HomeView: View {
                         let isActive = currentCatchID == c.id
                         
                         VStack(spacing: 0) {
-                            Image(uiImage: c.image)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(height: fishHeight)
-                                .shadow(color: isActive ? .black.opacity(0.35) : .clear, radius: isActive ? 18 : 0, x: 0, y: isActive ? 30 : 0)
-                                .overlay(alignment: .bottom) {
-                                    if isActive {
-                                        Ellipse()
-                                            .fill(.black.opacity(0.22))
-                                            .blur(radius: 16)
-                                            .frame(width: 120, height: 25)
-                                            .offset(y: 52)
-                                            .allowsHitTesting(false)
-                                    }
-                                }
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    detailCatch = c
-                                    showDetail = true
-                                }
+                            fishImageView(c: c, fishHeight: fishHeight, isActive: isActive)
                         }
                         .frame(width: itemWidth, height: geo.size.height)
                         .scrollTransition { content, phase in
@@ -190,6 +210,72 @@ struct HomeView: View {
         }
     }
     
+    /// Ikan aktif dapat efek tilt/parallax gyro (di-redraw 60fps lewat
+    /// TimelineView); ikan lain dirender datar tanpa biaya tambahan.
+    @ViewBuilder
+    private func fishImageView(c: CatchModel, fishHeight: CGFloat, isActive: Bool) -> some View {
+        if isActive {
+            TimelineView(.periodic(from: .now, by: 1.0 / 60.0)) { _ in
+                let tilt = currentTilt()
+                // Dua bayangan terpisah, TIDAK ikut rotasi 3D ikan:
+                //  • backShadow  = layer paling belakang, bergerak BERLAWANAN
+                //    arah ikan → kesan kedalaman/parallax.
+                //  • contactShadow = bayangan di bawah ikan yang IKUT posisi ikan.
+                ZStack(alignment: .bottom) {
+                    backShadow(tilt: tilt)
+                    contactShadow(tilt: tilt)
+                    fishImageOnly(c: c, fishHeight: fishHeight, isActive: true)
+                        .offset(x: tilt.parallaxX, y: tilt.parallaxY)
+                        .rotation3DEffect(.degrees(tilt.rotX), axis: (x: 1, y: 0, z: 0), perspective: 0.5)
+                        .rotation3DEffect(.degrees(tilt.rotY), axis: (x: 0, y: 1, z: 0), perspective: 0.5)
+                }
+            }
+        } else {
+            fishImageOnly(c: c, fishHeight: fishHeight, isActive: false)
+        }
+    }
+
+    private func fishImageOnly(c: CatchModel, fishHeight: CGFloat, isActive: Bool) -> some View {
+        Image(uiImage: c.image)
+            .resizable()
+            .scaledToFit()
+            .frame(height: fishHeight)
+            .shadow(color: isActive ? .black.opacity(0.35) : .clear, radius: isActive ? 18 : 0, x: 0, y: isActive ? 30 : 0)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                detailCatch = c
+                showDetail = true
+            }
+    }
+
+    /// Bayangan kontak di bawah ikan: IKUT posisi ikan (parallax searah),
+    /// memipih/melebar mengikuti tilt — terasa menempel pada ikan.
+    private func contactShadow(tilt: (rotX: Double, rotY: Double, parallaxX: Double, parallaxY: Double)) -> some View {
+        Ellipse()
+            .fill(.black.opacity(0.25))
+            .frame(width: 110, height: 22)
+            .scaleEffect(x: 1 + abs(tilt.rotY) / maxTilt * 0.12,
+                         y: 1 - abs(tilt.rotX) / maxTilt * 0.2)
+            .offset(x: tilt.parallaxX, y: 52)
+            .blur(radius: 12)
+            .allowsHitTesting(false)
+    }
+
+    /// Bayangan jauh di layer paling belakang: bergerak BERLAWANAN arah ikan
+    /// dan lebih lebar/blur → memperkuat ilusi kedalaman (logic dari TesIkan).
+    private func backShadow(tilt: (rotX: Double, rotY: Double, parallaxX: Double, parallaxY: Double)) -> some View {
+        Ellipse()
+            .fill(.black.opacity(0.3))
+            .frame(width: 155, height: 34)
+            .scaleEffect(x: 1 + abs(tilt.rotY) / maxTilt * 0.12,
+                         y: 1 - abs(tilt.rotX) / maxTilt * 0.2)
+            // Bergerak lebih jauh berlawanan arah ikan → depth lebih kerasa,
+            // meski geseran ikan sendiri sudah dikecilkan (maxParallax kecil).
+            .offset(x: -tilt.parallaxX * 2.4, y: 46)
+            .blur(radius: 20)
+            .allowsHitTesting(false)
+    }
+
     private func calculateCurrentFishPeek(screenWidth: CGFloat) -> CGFloat {
         switch selectedSort {
         case .latest:

@@ -49,7 +49,6 @@ struct ShareTemplatesView: View {
                 }
             }
             .overlay(alignment: .top) { header }
-            .overlay(alignment: .bottomTrailing) { shareButton }
         }
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
@@ -63,6 +62,8 @@ struct ShareTemplatesView: View {
             }
 
             Spacer()
+
+            shareButton
         }
         .padding(.horizontal, 20)
         .padding(.top, 8)
@@ -72,20 +73,14 @@ struct ShareTemplatesView: View {
         Button {
             shareSelected()
         } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "square.and.arrow.up")
-                    .font(.system(size: 18, weight: .semibold))
-                Text("Share")
-                    .font(.system(size: 17, weight: .semibold))
-            }
-            .foregroundStyle(.black)
-            .padding(.horizontal, 24)
-            .padding(.vertical, 15)
-            .glassStyle(Capsule())
+            Text("Share")
+                .font(.system(size: 17, weight: .semibold, design: .serif))
+                .foregroundStyle(.black)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 15)
+                .glassStyle(Capsule())
         }
         .buttonStyle(GlassPressStyle())
-        .padding(.horizontal, 20)
-        .padding(.bottom, 24)
     }
 
     private var pageDots: some View {
