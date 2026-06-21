@@ -412,7 +412,7 @@ final class ARMeasurementService: NSObject, ObservableObject {
                 return "Find a nearby surface to measure"
             }
             
-            return "Turn the fish so its head faces left"
+            return "Keep the fish steady on a clear surface"
         }
     }
 

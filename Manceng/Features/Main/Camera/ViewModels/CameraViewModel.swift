@@ -54,53 +54,35 @@ final class CameraViewModel: ObservableObject {
     }
 
     var centerInstructionText: String {
-        guard arService.isARReady else {
+        switch centerInstructionState {
+        case .waitingForAR:
             return arService.measurementGuidance
-        }
-
-        let fishCount = segmentedFishes.count
-
-        if fishCount > 1 {
-            return "Only 1 fish can be scanned at a time"
-        }
-
-        guard fishCount == 1 else {
+        case .noFish:
             return "Show 1 fish clearly in view"
-        }
-
-        guard hasValidFishOrientation else {
+        case .multipleFish:
+            return "Only 1 fish can be scanned at a time"
+        case .invalidOrientation:
             return "Turn the fish so its head faces left"
+        case .measuringLength:
+            return measurementInstructionText
+        case .ready:
+            return "Ready to capture"
         }
-
-        guard hasReliableFishMeasurement else {
-            return arService.measurementGuidance
-        }
-
-        return "Ready to capture"
     }
 
     var centerInstructionStatusText: String? {
-        guard arService.isARReady else { return nil }
-
-        let fishCount = segmentedFishes.count
-
-        if fishCount > 1 {
-            return "Currently more than one fish is displayed in the camera"
-        }
-
-        guard fishCount == 1 else {
+        switch centerInstructionState {
+        case .waitingForAR, .ready:
+            return nil
+        case .noFish:
             return "Currently no fish is visible"
-        }
-
-        guard hasValidFishOrientation else {
+        case .multipleFish:
+            return "Currently more than one fish is displayed in the camera"
+        case .invalidOrientation:
             return "Currently the fish head is outside the allowed angle"
-        }
-
-        guard hasReliableFishMeasurement else {
+        case .measuringLength:
             return "Currently measuring the fish length. . ."
         }
-
-        return nil
     }
 
     var focusedFishBoundingBox: CGRect? {
@@ -128,6 +110,39 @@ final class CameraViewModel: ObservableObject {
         }
 
         return length.isFinite && length > 0
+    }
+
+    private enum CenterInstructionState {
+        case waitingForAR
+        case noFish
+        case multipleFish
+        case invalidOrientation
+        case measuringLength
+        case ready
+    }
+
+    private var centerInstructionState: CenterInstructionState {
+        guard arService.isARReady else { return .waitingForAR }
+
+        switch segmentedFishes.count {
+        case 0:
+            return .noFish
+        case 1:
+            guard hasValidFishOrientation else { return .invalidOrientation }
+            guard hasReliableFishMeasurement else { return .measuringLength }
+            return .ready
+        default:
+            return .multipleFish
+        }
+    }
+
+    private var measurementInstructionText: String {
+        let guidance = arService.measurementGuidance
+        if guidance == "Turn the fish so its head faces left" {
+            return "Keep the fish steady on a clear surface"
+        }
+
+        return guidance
     }
 
     func prepareCameraPermission() async {
