@@ -48,8 +48,15 @@ struct CameraView: View {
 
             if viewModel.cameraPermissionState.canUseCamera,
                !viewModel.shouldShowARCoaching,
-               !viewModel.showCameraGuide {
+               !viewModel.showCameraGuide,
+               !viewModel.isCapturing,
+               !viewModel.canCapture {
                 centerInstruction
+            }
+
+            if viewModel.cameraPermissionState.canUseCamera,
+               viewModel.isCapturing {
+                captureScanningMessage
             }
 
             if viewModel.cameraPermissionState.canUseCamera,
@@ -155,6 +162,16 @@ struct CameraView: View {
         .shadow(radius: 4)
     }
 
+    private var captureScanningMessage: some View {
+        Text("Scanning your fish...")
+            .font(.system(size: 18, weight: .bold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 22)
+            .padding(.vertical, 14)
+            .background(.black.opacity(0.42), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .shadow(radius: 4)
+    }
+
     private var permissionBackground: some View {
         Color.neutralColorPrimaryBlack1
                 .ignoresSafeArea()
@@ -220,7 +237,7 @@ struct CameraView: View {
             } label: {
                 ZStack {
                     Circle()
-                        .fill(viewModel.canCapture && !viewModel.isCapturing ? Color.black : Color.white.opacity(0.55))
+                        .fill(captureButtonFill)
                         .frame(width: 64, height: 64)
 
                     Circle()
@@ -236,6 +253,14 @@ struct CameraView: View {
     private var captureLoadingIndicator: some View {
         CaptureScanningIndicator()
     }
+
+    private var captureButtonFill: Color {
+        if viewModel.isCapturing {
+            return Color.white.opacity(0.55)
+        }
+
+        return viewModel.canCapture ? Color.brandColorPrimaryYellow : Color.white.opacity(0.55)
+    }
 }
 
 private struct CaptureScanningIndicator: View {
@@ -244,7 +269,7 @@ private struct CaptureScanningIndicator: View {
     @State private var scanScale: CGFloat = 0.88
 
     var body: some View {
-        HStack(spacing: 12) {
+        ZStack {
             ZStack {
                 RoundedRectangle(cornerRadius: 3, style: .continuous)
                     .fill(Color.white.opacity(scanOpacity ? 0.82 : 0.26))
@@ -263,17 +288,15 @@ private struct CaptureScanningIndicator: View {
                     .offset(x: phoneOffset)
             }
             .frame(width: 88, height: 54)
-
-            Text("Scanning fish image")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.white)
-                .lineLimit(2)
-                .multilineTextAlignment(.leading)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .background(.black.opacity(0.48), in: Capsule())
-        .onAppear {
+        .frame(width: 104, height: 66)
+        .background(.black.opacity(0.34), in: Capsule())
+        .task {
+            phoneOffset = -18
+            scanOpacity = false
+            scanScale = 0.88
+            await Task.yield()
+
             withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
                 phoneOffset = 18
             }
@@ -282,6 +305,11 @@ private struct CaptureScanningIndicator: View {
                 scanOpacity = true
                 scanScale = 1.08
             }
+        }
+        .onDisappear {
+            phoneOffset = -18
+            scanOpacity = false
+            scanScale = 0.88
         }
     }
 }

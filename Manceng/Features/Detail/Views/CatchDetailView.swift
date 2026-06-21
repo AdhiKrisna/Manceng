@@ -189,7 +189,7 @@ struct CatchDetailView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            field(label: "Location", value: location, lineLimit: 1)
+            field(label: "Location", value: location, lineLimit: 2)
         }
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -222,8 +222,8 @@ struct CatchDetailView: View {
             Text("\(Text(value).font(.title1Bold)) \(Text(unit ?? "").font(.kgCmFont))")
                 .foregroundStyle(.black)
                 .lineLimit(lineLimit)
-                .truncationMode(.tail)
                 .minimumScaleFactor(0.75)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.leading, isSize ? 30 : 0)
         }
     }

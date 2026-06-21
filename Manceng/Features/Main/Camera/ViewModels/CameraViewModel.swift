@@ -47,7 +47,6 @@ final class CameraViewModel: ObservableObject {
     var canCapture: Bool {
         cameraPermissionState.canUseCamera &&
         arService.isARReady &&
-        !isScanningFish &&
         !isCapturing &&
         hasReliableFishMeasurement &&
         hasValidFishOrientation
@@ -58,30 +57,46 @@ final class CameraViewModel: ObservableObject {
             return arService.measurementGuidance
         }
 
-        if segmentedFishes.count > 1 {
+        let fishCount = segmentedFishes.count
+
+        if fishCount > 1 {
             return "Only 1 fish can be scanned at a time"
         }
 
-        guard hasReliableFishMeasurement else {
+        guard fishCount == 1 else {
             return "Show 1 fish clearly in view"
         }
 
-        return "Turn the fish so its head faces left"
+        guard hasValidFishOrientation else {
+            return "Turn the fish so its head faces left"
+        }
+
+        guard hasReliableFishMeasurement else {
+            return arService.measurementGuidance
+        }
+
+        return "Ready to capture"
     }
 
     var centerInstructionStatusText: String? {
         guard arService.isARReady else { return nil }
 
-        if segmentedFishes.count > 1 {
+        let fishCount = segmentedFishes.count
+
+        if fishCount > 1 {
             return "Currently more than one fish is displayed in the camera"
         }
 
-        guard hasReliableFishMeasurement else {
+        guard fishCount == 1 else {
             return "Currently no fish is visible"
         }
 
         guard hasValidFishOrientation else {
-            return "Currently your fish is facing right"
+            return "Currently the fish head is outside the allowed angle"
+        }
+
+        guard hasReliableFishMeasurement else {
+            return "Currently measuring the fish length"
         }
 
         return nil
@@ -122,16 +137,25 @@ final class CameraViewModel: ObservableObject {
         }
 
         showPermissionAlert = shouldShowPermissionAlert
+        if cameraPermissionState.canUseCamera {
+            catchLocationService.warmUpIfAuthorized()
+        }
     }
 
     func requestCameraPermission() async {
         cameraPermissionState = await permissionService.requestAccess()
         showPermissionAlert = shouldShowPermissionAlert
+        if cameraPermissionState.canUseCamera {
+            catchLocationService.warmUpIfAuthorized()
+        }
     }
 
     func refreshPermissionState() {
         cameraPermissionState = permissionService.currentState()
         showPermissionAlert = shouldShowPermissionAlert
+        if cameraPermissionState.canUseCamera {
+            catchLocationService.warmUpIfAuthorized()
+        }
     }
 
     func openSettings() {
@@ -194,6 +218,7 @@ final class CameraViewModel: ObservableObject {
     func onDisappear() {
         stopARCoachingGate()
         stopScanning()
+        catchLocationService.stopUpdatingLocation()
         arService.stop()
     }
 
@@ -297,6 +322,13 @@ final class CameraViewModel: ObservableObject {
 
         let fishes = await segment(image: image)
         var enriched = fishes
+        guard enriched.count == 1 else {
+            scannedImage = image
+            segmentedFishes = enriched
+            isScanningFish = false
+            return
+        }
+
         for index in enriched.indices {
             let classification = await classify(
                 image: image,

@@ -27,6 +27,7 @@ final class ARMeasurementService: NSObject, ObservableObject {
     /// Image resolution reported by the AR camera
     private var cameraImageResolution: CGSize?
     private var hasDetectedPlane = false
+    private var shouldSkipProjectedMeasurement = false
     private let minimumMeasurementDistanceMeters: Float = 0.08
     private let maximumMeasurementDistanceMeters: Float = 1.2
 
@@ -85,12 +86,15 @@ final class ARMeasurementService: NSObject, ObservableObject {
     // MARK: - Measurement
 
     func estimateLengthCm(for boundingBox: CGRect, imageSize: CGSize) -> Double? {
+        shouldSkipProjectedMeasurement = false
+
         if let arLength = raycastLengthCm(for: boundingBox, imageSize: imageSize) {
             isUsingFallbackMeasurement = false
             return arLength
         }
 
-        if let projectedLength = projectedLengthCm(for: boundingBox, imageSize: imageSize) {
+        if !shouldSkipProjectedMeasurement,
+           let projectedLength = projectedLengthCm(for: boundingBox, imageSize: imageSize) {
             isUsingFallbackMeasurement = false
             return projectedLength
         }
@@ -145,9 +149,7 @@ final class ARMeasurementService: NSObject, ObservableObject {
               let surface = surfaceHit(from: centerPoint, in: sceneView),
               let cameraPosition = currentCameraPosition(in: sceneView),
               let firstRay = worldRay(from: firstPoint, in: sceneView),
-              let secondRay = worldRay(from: secondPoint, in: sceneView),
-              let first = intersection(of: firstRay, withPlaneAt: surface.position, normal: surface.normal),
-              let second = intersection(of: secondRay, withPlaneAt: surface.position, normal: surface.normal) else {
+              let secondRay = worldRay(from: secondPoint, in: sceneView) else {
             return nil
         }
 
@@ -159,7 +161,20 @@ final class ARMeasurementService: NSObject, ObservableObject {
             return nil
         }
 
-        let endpointDistanceTolerance = max(0.15, surface.distanceFromCamera * 0.45)
+        if let firstSurface = surfaceHit(from: firstPoint, in: sceneView),
+           let secondSurface = surfaceHit(from: secondPoint, in: sceneView),
+           surfaceHitsAreConsistent(center: surface, first: firstSurface, second: secondSurface) {
+            let lengthMeters = simd_distance(firstSurface.position, secondSurface.position)
+            guard lengthMeters.isFinite, lengthMeters > 0.01, lengthMeters < 1.5 else { return nil }
+            return Double(lengthMeters) * 100
+        }
+
+        guard let first = intersection(of: firstRay, withPlaneAt: surface.position, normal: surface.normal),
+              let second = intersection(of: secondRay, withPlaneAt: surface.position, normal: surface.normal) else {
+            return nil
+        }
+
+        let endpointDistanceTolerance = max(0.06, surface.distanceFromCamera * 0.16)
         let firstDistanceDelta = abs(simd_distance(cameraPosition, first) - surface.distanceFromCamera)
         let secondDistanceDelta = abs(simd_distance(cameraPosition, second) - surface.distanceFromCamera)
         guard firstDistanceDelta <= endpointDistanceTolerance,
@@ -228,6 +243,26 @@ final class ARMeasurementService: NSObject, ObservableObject {
         }
 
         return lengthMeters * 100
+    }
+
+    private func surfaceHitsAreConsistent(center: SurfaceHit, first: SurfaceHit, second: SurfaceHit) -> Bool {
+        let distanceTolerance = max(0.06, center.distanceFromCamera * 0.16)
+        let firstDistanceDelta = abs(first.distanceFromCamera - center.distanceFromCamera)
+        let secondDistanceDelta = abs(second.distanceFromCamera - center.distanceFromCamera)
+        let normalSimilarity = min(
+            simd_dot(center.normal, first.normal),
+            simd_dot(center.normal, second.normal)
+        )
+
+        guard firstDistanceDelta <= distanceTolerance,
+              secondDistanceDelta <= distanceTolerance,
+              normalSimilarity >= 0.86 else {
+            measurementGuidance = "Align the fish on one clear surface"
+            shouldSkipProjectedMeasurement = true
+            return false
+        }
+
+        return true
     }
 
     private func surfaceHit(from point: CGPoint, in sceneView: ARSCNView) -> SurfaceHit? {

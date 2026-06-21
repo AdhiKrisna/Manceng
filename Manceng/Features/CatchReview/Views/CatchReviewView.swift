@@ -161,6 +161,7 @@ struct CatchReviewView: View {
                 .foregroundStyle(.black)
                 .lineLimit(2)
                 .minimumScaleFactor(0.75)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.leading, isSize ? 30 : 0)
         }
     }

@@ -83,13 +83,13 @@ final class FishSegmentationService {
         let configuration = MLModelConfiguration()
         configuration.computeUnits = .all
 
-        if let compiledURL = Bundle.main.url(forResource: "best", withExtension: "mlmodelc"),
+        if let compiledURL = Bundle.main.url(forResource: "SegmentationModel", withExtension: "mlmodelc"),
            let loaded = try? MLModel(contentsOf: compiledURL, configuration: configuration) {
             model = loaded
             return
         }
 
-        if let packageURL = Bundle.main.url(forResource: "best", withExtension: "mlpackage"),
+        if let packageURL = Bundle.main.url(forResource: "SegmentationModel", withExtension: "mlpackage"),
            let loaded = try? MLModel(contentsOf: packageURL, configuration: configuration) {
             model = loaded
             return

@@ -1,0 +1,177 @@
+[
+  {
+    "id": "mentimun",
+    "nama": "Mentimun",
+    "nama_ilmiah": "Lutjanus carponotatus",
+    "a": 0.01549,
+    "b": 2.95
+  },
+  {
+    "id": "kakaptompel",
+    "nama": "Kakap Tompel",
+    "nama_ilmiah": "Lutjanus russellii",
+    "a": 0.01514,
+    "b": 2.96
+  },
+  {
+    "id": "gt",
+    "nama": "Giant Trevally",
+    "nama_ilmiah": "Caranx ignobilis",
+    "a": 0.01698,
+    "b": 2.96
+  },
+  {
+    "id": "selarkuning",
+    "nama": "Selar Kuning",
+    "nama_ilmiah": "Selaroides leptolepis",
+    "a": 0.01288,
+    "b": 2.97
+  },
+  {
+    "id": "kerapukarang",
+    "nama": "Kerapu Karang",
+    "nama_ilmiah": "Cephalopholis miniata",
+    "a": 0.01148,
+    "b": 3.04
+  },
+  {
+    "id": "kerapubatu",
+    "nama": "Kerapu Batu",
+    "nama_ilmiah": "Epinephelus malabaricus",
+    "a": 0.01148,
+    "b": 3.04
+  },
+  {
+    "id": "kerongkerong",
+    "nama": "Kerong-Kerong",
+    "nama_ilmiah": "Terapon jarbua",
+    "a": 0.01549,
+    "b": 3.02
+  },
+  {
+    "id": "kaci",
+    "nama": "Kaci",
+    "nama_ilmiah": "Diagramma pictum",
+    "a": 0.01202,
+    "b": 2.99
+  },
+  {
+    "id": "talang",
+    "nama": "Talang",
+    "nama_ilmiah": "Scomberoides commersonnianus",
+    "a": 0.01096,
+    "b": 2.92
+  },
+  {
+    "id": "cakalang",
+    "nama": "Cakalang",
+    "nama_ilmiah": "Katsuwonus pelamis",
+    "a": 0.01072,
+    "b": 3.10
+  },
+  {
+    "id": "baronang",
+    "nama": "Baronang",
+    "nama_ilmiah": "Siganus javus",
+    "a": 0.01479,
+    "b": 3.05
+  },
+  {
+    "id": "sembilang",
+    "nama": "Sembilang",
+    "nama_ilmiah": "Plotosus lineatus",
+    "a": 0.00575,
+    "b": 3.13
+  },
+  {
+    "id": "tenggiri",
+    "nama": "Tenggiri",
+    "nama_ilmiah": "Scomberomorus commerson",
+    "a": 0.00661,
+    "b": 3.01
+  },
+  {
+    "id": "baracuda",
+    "nama": "Baracuda",
+    "nama_ilmiah": "Sphyraena barracuda",
+    "a": 0.00851,
+    "b": 2.93
+  },
+  {
+    "id": "buntal",
+    "nama": "Buntal",
+    "nama_ilmiah": "Dichotomyctere nigroviridis",
+    "a": 0.02630,
+    "b": 2.88
+  },
+  {
+    "id": "kakapputih",
+    "nama": "Kakap Putih",
+    "nama_ilmiah": "Lates calcarifer",
+    "a": 0.01000,
+    "b": 3.00
+  },
+  {
+    "id": "kakapmerah",
+    "nama": "Kakap Merah",
+    "nama_ilmiah": "Lutjanus campechanus",
+    "a": 0.01479,
+    "b": 2.96
+  },
+  {
+    "id": "tuna",
+    "nama": "Tuna",
+    "nama_ilmiah": "Thunnus albacares",
+    "a": 0.01445,
+    "b": 3.03
+  },
+  {
+    "id": "tongkol",
+    "nama": "Tongkol",
+    "nama_ilmiah": "Euthynnus affinis",
+    "a": 0.00977,
+    "b": 3.05
+  },
+  {
+    "id": "cucut",
+    "nama": "Cucut",
+    "nama_ilmiah": "Tylosurus crocodilus",
+    "a": 0.00112,
+    "b": 3.10
+  },
+  {
+    "id": "bandeng",
+    "nama": "Bandeng",
+    "nama_ilmiah": "Chanos chanos",
+    "a": 0.00851,
+    "b": 3.06
+  },
+  {
+    "id": "todak",
+    "nama": "Todak",
+    "nama_ilmiah": "Xiphias gladius",
+    "a": 0.00380,
+    "b": 3.15
+  },
+  {
+    "id": "gerinsi",
+    "nama": "Gerinsi",
+    "nama_ilmiah": "Nemipterus japonicus",
+    "a": 0.01413,
+    "b": 2.96
+  },
+  {
+    "id": "bawalputih",
+    "nama": "Bawal Putih",
+    "nama_ilmiah": "Pampus argenteus",
+    "a": 0.01820,
+    "b": 3.02
+  },
+  {
+    "id": "pari",
+    "nama": "Pari",
+    "nama_ilmiah": "Neotrygon kuhlii",
+    "a": 0.01820,
+    "b": 3.02
+  }
+]

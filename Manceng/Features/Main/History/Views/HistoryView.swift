@@ -30,6 +30,7 @@ struct HistoryView: View {
         VStack {
             header
                 .padding(.horizontal, 20)
+                .padding(.top, 30)
             Spacer()
             if catches.isEmpty {
                 VStack {

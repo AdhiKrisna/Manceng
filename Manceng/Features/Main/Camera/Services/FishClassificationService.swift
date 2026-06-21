@@ -15,7 +15,7 @@ struct FishClassificationResult {
 
 final class FishClassificationService: @unchecked Sendable {
     private static let minimumConfidence = 0.5
-    private static let modelResourceName = "ClassificationModel-V2"
+    private static let modelResourceName = "ClassificationModel"
     private static let inputImageSize = 224
     private static let inputPixelFormat = kCVPixelFormatType_32ARGB
     private let model: MLModel?
