@@ -9,6 +9,7 @@ struct MainView: View {
     @State private var path = NavigationPath()
     @State private var walkthroughStep = 0
     @State private var showCameraSettingsAlert = false
+    @State private var isOpeningCamera = false
 
     enum Tab: Hashable {
         case home, map, history, camera
@@ -83,8 +84,10 @@ struct MainView: View {
                             .foregroundColor(.neutralColorPrimaryBlack1)
                             .frame(width: 72, height: 72)
                             .glassEffect(in: Circle())
+                            .contentShape(Circle())
                     }
                     .buttonStyle(GlassPressStyle())
+                    .disabled(isOpeningCamera)
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 8)
@@ -107,6 +110,9 @@ struct MainView: View {
                         if !path.isEmpty {
                             path.removeLast()
                         }
+                    }
+                    .onDisappear {
+                        isOpeningCamera = false
                     }
                 case .catchDetail(let catchModel):
                     CatchDetailView(catchModel: catchModel)
@@ -147,7 +153,7 @@ struct MainView: View {
             .background {
                 if isSelected {
                     Capsule()
-                        .fill(Color.neutralColorPrimaryWhite).opacity(0.5)
+                        .fill(Color.neutralColorPrimaryBlack1).opacity(0.2)
                 }
             }
             .foregroundColor(isSelected ? .blue : .neutralColorPrimaryBlack1)
@@ -165,18 +171,22 @@ struct MainView: View {
     }
 
     private func handleCameraTabSelection() {
+        guard !isOpeningCamera else { return }
         let permissionService = CameraPermissionService()
 
         switch permissionService.currentState() {
         case .authorized:
+            isOpeningCamera = true
             path.append(Destination.camera)
         case .notDetermined:
+            isOpeningCamera = true
             Task { @MainActor in
                 let permissionState = await permissionService.requestAccess()
                 if permissionState.canUseCamera {
                     path.append(Destination.camera)
                 } else {
                     showCameraSettingsAlert = true
+                    isOpeningCamera = false
                 }
             }
         case .denied, .restricted:

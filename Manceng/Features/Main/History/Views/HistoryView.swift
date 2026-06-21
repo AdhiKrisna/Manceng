@@ -10,8 +10,7 @@ import SwiftUI
 
 struct HistoryView: View {
     @StateObject private var viewModel = HistoryViewModel()
-    @StateObject private var model3DMotion = Model3DMotionManager()
-    @State private var interaction = FishInteractionState()
+    @StateObject private var emptyStateMotion = Model3DMotionManager()
     @Query private var allCatches: [CatchModel]
     let onSelectCatch: (CatchModel) -> Void
     
@@ -34,7 +33,7 @@ struct HistoryView: View {
             Spacer()
             if catches.isEmpty {
                 VStack {
-                    emptyState.padding(.bottom, 118)
+                    emptyState.padding(.bottom, 100)
 
                 }
             } else {
@@ -72,16 +71,8 @@ struct HistoryView: View {
 
     private var emptyState: some View {
         VStack(spacing: 24) {
-            FishModelView(
-                motion: model3DMotion,
-                interaction: interaction,
-                extraYawDegrees: 90,
-                fillSize: 0.45,
-                allowZoom: false
-            )
-            .frame(height: 320)
-            .onAppear { model3DMotion.start() }
-            .onDisappear { model3DMotion.stop() }
+            EmptyStateFishArtView(motion: emptyStateMotion, fishHeight: 320)
+                .frame(height: 360)
 
             VStack(spacing: 8) {
                 Text("No catches recorded yet!")
@@ -102,6 +93,8 @@ struct HistoryView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 24)
+        .onAppear { emptyStateMotion.start() }
+        .onDisappear { emptyStateMotion.stop() }
     }
 
     private func historyItem(_ item: CatchModel) -> some View {

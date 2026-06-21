@@ -29,10 +29,10 @@ final class CameraViewModel: ObservableObject {
     private var isScanningPaused = false
 
     let arService = ARMeasurementService()
-    private let cameraService = CameraService()
     private let permissionService = CameraPermissionService()
-    private let catchLocationService = CatchLocationService()
-    private let classificationService = FishClassificationService()
+    private lazy var cameraService = CameraService()
+    private lazy var catchLocationService = CatchLocationService()
+    private lazy var classificationService = FishClassificationService()
     private let weightEstimationService = FishWeightEstimationService()
     private let minimumClassificationConfidence = 0.80
     private let scanIntervalNanoseconds: UInt64 = 900_000_000

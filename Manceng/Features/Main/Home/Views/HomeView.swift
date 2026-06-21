@@ -7,8 +7,6 @@
 
 import SwiftUI
 import SwiftData
-import RealityKit
-import Combine
 
 /// Menyimpan sudut gyro yang sedang ditampilkan agar bisa di-ease menuju
 /// target tiap frame. Class biasa (bukan @Published) — mutasinya tidak memicu
@@ -24,9 +22,8 @@ struct HomeView: View {
     // Sort option menggunakan component SortButton
     @State private var selectedSort: SortOption = .latest
 
-    // Model 3D ikan untuk state kosong (drag saja, tanpa gyro).
-    @StateObject private var model3DMotion = Model3DMotionManager()
-    @State private var interaction = FishInteractionState()
+    // Gyro untuk empty state agar gerakan ikan konsisten dengan carousel.
+    @StateObject private var emptyStateMotion = Model3DMotionManager()
 
     // Gyro untuk efek tilt/parallax pada ikan aktif di carousel.
     @StateObject private var carouselMotion = Model3DMotionManager()
@@ -313,26 +310,14 @@ struct HomeView: View {
 
     private var emptyState: some View {
         VStack(spacing: 24) {
-            // Hanya dirender saat halaman detail TIDAK aktif: dua RealityView
-            // yang hidup bersamaan saling bentrok (salah satunya jadi kosong).
             Group {
                 if showDetail {
                     Color.clear
                 } else {
-                    FishModelView(
-                        motion: model3DMotion,
-                        interaction: interaction,
-                        onSingleTap: {
-                            detailCatch = nil
-                            showDetail = true
-                        },
-                        extraYawDegrees: 90,
-                        fillSize: 0.45,
-                        allowZoom: false
-                    )
+                    EmptyStateFishArtView(motion: emptyStateMotion, fishHeight: 320)
                 }
             }
-            .frame(height: 320)
+            .frame(height: 360)
 
             VStack(spacing: 8) {
                 Text("No catches recorded yet!")
@@ -346,6 +331,8 @@ struct HomeView: View {
             }
         }
         .padding(24)
+        .onAppear { emptyStateMotion.start() }
+        .onDisappear { emptyStateMotion.stop() }
     }
 }
 
