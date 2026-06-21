@@ -6,83 +6,173 @@ struct GifImageView: UIViewRepresentable {
     let name: String
     let bundle: Bundle = .main
 
-    /// Cache statis supaya GIF yang sama tidak dibaca ulang dari disk tiap kali
+    /// Cache statis supaya GIF yang sama tidak di-decode ulang tiap kali
     /// SwiftUI memanggil `updateUIView`.
-    private static var cache: [String: UIImage] = [:]
+    private static var cache: [String: GifAsset] = [:]
 
-    func makeUIView(context: Context) -> UIImageView {
-        let imageView = UIImageView()
-        imageView.contentMode = .scaleAspectFit
-        imageView.clipsToBounds = true
-        return imageView
+    func makeUIView(context: Context) -> AnimatedGifView {
+        let view = AnimatedGifView()
+        view.contentMode = .scaleAspectFit
+        view.clipsToBounds = true
+        // Supaya SwiftUI `.frame(...)` dihormati dan UIImageView tidak memaksa
+        // pakai intrinsicContentSize dari GIF (yang bisa sangat besar).
+        view.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        view.setContentHuggingPriority(.defaultLow, for: .vertical)
+        view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        view.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
+        return view
     }
 
-    func updateUIView(_ uiView: UIImageView, context: Context) {
+    func updateUIView(_ uiView: AnimatedGifView, context: Context) {
         if let cached = Self.cache[name] {
-            if uiView.image !== cached {
-                uiView.image = cached
-                uiView.startAnimating()
-            }
+            uiView.configure(with: cached)
             return
         }
-        guard let image = loadGIF() else {
+        guard let asset = loadAsset() else {
             print("[GifImageView] ❌ GIF '\(name)' tidak ditemukan. " +
                   "Pastikan file '\(name).gif' ter-copy ke bundle " +
                   "(Build Phases → Copy Bundle Resources) ATAU ada Data Set " +
                   "bernama '\(name)' di Assets.xcassets.")
             return
         }
-        Self.cache[name] = image
-        uiView.image = image
-        uiView.startAnimating()
+        Self.cache[name] = asset
+        uiView.configure(with: asset)
     }
 
-    private func loadGIF() -> UIImage? {
+    private func loadAsset() -> GifAsset? {
         // 1) File .gif loose di bundle (paling umum).
         if let url = bundle.url(forResource: name, withExtension: "gif"),
-           let data = try? Data(contentsOf: url) {
-            print("[GifImageView] ✅ loaded '\(name).gif' dari bundle URL")
-            return UIImage.animatedImage(with: data)
+           let data = try? Data(contentsOf: url),
+           let asset = GifAsset(data: data) {
+            return asset
         }
         // 2) Data Asset di Assets.xcassets dengan nama persis.
-        if let data = NSDataAsset(name: name, bundle: bundle)?.data {
-            print("[GifImageView] ✅ loaded '\(name)' dari Data Asset")
-            return UIImage.animatedImage(with: data)
+        if let data = NSDataAsset(name: name, bundle: bundle)?.data,
+           let asset = GifAsset(data: data) {
+            return asset
         }
         // 3) Data Asset yang terlanjur dinamai dengan ekstensi .gif.
-        let withExt = "\(name).gif"
-        if let data = NSDataAsset(name: withExt, bundle: bundle)?.data {
-            print("[GifImageView] ✅ loaded '\(withExt)' dari Data Asset")
-            return UIImage.animatedImage(with: data)
+        if let data = NSDataAsset(name: "\(name).gif", bundle: bundle)?.data,
+           let asset = GifAsset(data: data) {
+            return asset
         }
         return nil
     }
 }
 
-extension UIImage {
-    static func animatedImage(with data: Data) -> UIImage? {
-        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
-            return nil
-        }
-        
+/// GIF hasil decode: frames + per-frame delay (detik).
+struct GifAsset {
+    let frames: [UIImage]
+    let delays: [TimeInterval]
+
+    init?(data: Data) {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
         let count = CGImageSourceGetCount(source)
-        var images: [UIImage] = []
-        var duration: TimeInterval = 0
-        
+        guard count > 0 else { return nil }
+
+        var frames: [UIImage] = []
+        var delays: [TimeInterval] = []
+        frames.reserveCapacity(count)
+        delays.reserveCapacity(count)
+
         for i in 0..<count {
-            if let cgImage = CGImageSourceCreateImageAtIndex(source, i, nil) {
-                images.append(UIImage(cgImage: cgImage))
-            }
-            
-            if let properties = CGImageSourceCopyPropertiesAtIndex(source, i, nil) as? [CFString: Any],
-               let gifProperties = properties[kCGImagePropertyGIFDictionary] as? [CFString: Any],
-               let delay = gifProperties[kCGImagePropertyGIFDelayTime] as? TimeInterval {
-                duration += delay
-            } else {
-                duration += 0.1
-            }
+            guard let cgImage = CGImageSourceCreateImageAtIndex(source, i, nil) else { continue }
+            frames.append(UIImage(cgImage: cgImage))
+            delays.append(Self.frameDelay(at: i, in: source))
         }
-        
-        return UIImage.animatedImage(with: images, duration: duration)
+
+        guard !frames.isEmpty else { return nil }
+        self.frames = frames
+        self.delays = delays
+    }
+
+    private static func frameDelay(at index: Int, in source: CGImageSource) -> TimeInterval {
+        guard let properties = CGImageSourceCopyPropertiesAtIndex(source, index, nil) as? [CFString: Any],
+              let gifProps = properties[kCGImagePropertyGIFDictionary] as? [CFString: Any] else {
+            return 0.1
+        }
+        // Prefer unclamped (delay asli dari GIF spec) over clamped (>= 0.1s).
+        var delay: TimeInterval = 0
+        if let unclamped = gifProps[kCGImagePropertyGIFUnclampedDelayTime] as? TimeInterval {
+            delay = unclamped
+        } else if let clamped = gifProps[kCGImagePropertyGIFDelayTime] as? TimeInterval {
+            delay = clamped
+        }
+        // Minimum 20ms (50fps cap) supaya tidak ada frame 0-detik yang bikin loop spin.
+        return delay > 0.02 ? delay : 0.1
+    }
+}
+
+/// `UIImageView` subclass yang memainkan `GifAsset` dengan timing per-frame
+/// yang benar via `CADisplayLink`. Otomatis pause saat view lepas dari window.
+final class AnimatedGifView: UIImageView {
+    private var asset: GifAsset?
+    private var displayLink: CADisplayLink?
+    private var currentFrameIndex = 0
+    private var accumulator: CFTimeInterval = 0
+    private var lastTimestamp: CFTimeInterval = 0
+
+    func configure(with asset: GifAsset) {
+        // Skip kalau asset yang sama sudah jalan.
+        if let current = self.asset,
+           current.frames.first === asset.frames.first,
+           current.frames.count == asset.frames.count {
+            ensureDisplayLink()
+            return
+        }
+        self.asset = asset
+        currentFrameIndex = 0
+        accumulator = 0
+        lastTimestamp = 0
+        image = asset.frames[0]
+        ensureDisplayLink()
+    }
+
+    private func ensureDisplayLink() {
+        guard window != nil,
+              let asset = asset,
+              asset.frames.count > 1,
+              displayLink == nil else { return }
+        let link = CADisplayLink(target: self, selector: #selector(tick(_:)))
+        link.add(to: .main, forMode: .common)
+        displayLink = link
+    }
+
+    @objc private func tick(_ link: CADisplayLink) {
+        guard let asset = asset else { return }
+        if lastTimestamp == 0 {
+            lastTimestamp = link.timestamp
+            return
+        }
+        let delta = link.timestamp - lastTimestamp
+        lastTimestamp = link.timestamp
+        accumulator += delta
+
+        // Advance frame berdasarkan akumulasi waktu — loop kalau delta besar
+        // (mis. setelah pause) supaya tidak ada drift.
+        var advanced = false
+        while accumulator >= asset.delays[currentFrameIndex] {
+            accumulator -= asset.delays[currentFrameIndex]
+            currentFrameIndex = (currentFrameIndex + 1) % asset.frames.count
+            advanced = true
+        }
+        if advanced {
+            image = asset.frames[currentFrameIndex]
+        }
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window == nil {
+            displayLink?.invalidate()
+            displayLink = nil
+            lastTimestamp = 0
+        } else {
+            ensureDisplayLink()
+        }
+    }
+
+    deinit {
+        displayLink?.invalidate()
     }
 }

@@ -92,13 +92,13 @@ struct CameraGuideView: View {
             ZStack {
                 if item.showsPhone {
                     GifImageView(name: "fishposition")
-                        .frame(width: 20, height: 20)
-                        .shadow(color: Color.neutralColorPrimaryWhite.opacity(0.6), radius: 12)
+                        .frame(width: 220, height: 220)
+                        .shadow(color: Color.neutralColorPrimaryWhite.opacity(0.6), radius: 10)
                         .offset(y: fishBob)
                 } else {
                     GifImageView(name: "onlyonefish")
-                        .frame(width: 20, height: 20)
-                        .shadow(color: Color.neutralColorPrimaryWhite.opacity(0.6), radius: 12)
+                        .frame(width: 220, height: 220)
+                        .shadow(color: Color.neutralColorPrimaryWhite.opacity(0.6), radius: 10)
                         .offset(y: fishBob)
                 }
             }

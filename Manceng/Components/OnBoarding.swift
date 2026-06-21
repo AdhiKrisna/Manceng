@@ -27,7 +27,7 @@ struct OnBoarding: View {
         VStack(spacing: 0) {
             // Gambar full-width (edge-to-edge), scaledToFit agar utuh seperti desain.
             if let containerSize = containerSize {
-                ZStack {
+                ZStack(alignment: .bottom) {
                     if let size = imageSize {
                         image
                             .resizable()
@@ -41,6 +41,7 @@ struct OnBoarding: View {
                     }
                 }
                 .frame(width: containerSize.width, height: containerSize.height)
+                .padding(.top, 120)
             } else {
                 if let size = imageSize {
                     image
@@ -55,7 +56,7 @@ struct OnBoarding: View {
                 }
             }
 
-            Spacer().frame(height: 105)
+            Spacer(minLength: 105)
 
             VStack(spacing: 15) {
                 Text(title)

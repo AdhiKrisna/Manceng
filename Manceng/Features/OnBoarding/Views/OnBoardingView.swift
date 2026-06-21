@@ -25,15 +25,15 @@ struct OnBoardingView: View {
                         image: Image(item.image),
                         title: item.title,
                         caption: item.caption,
-                        imageSize: item.image == "onboarding" ? CGSize(width: 190.75, height: 202.87) : nil,
-                        containerSize: item.image == "onboarding" ? CGSize(width: 363, height: 441) : nil
+                        imageSize: item.image == "onboarding" ? CGSize(width: 250, height: 250) : nil,
+                        containerSize: item.image == "onboarding" ? CGSize(width: 400, height: 300) : nil
                     )
                     .tag(index)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             
-            Spacer().frame(height: 60)
+            Spacer().frame(height: 80)
             
             CustomButton(title: currentPage == data.count - 1 ? "Start" : "Next") {
                 if currentPage < data.count - 1 {
