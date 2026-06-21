@@ -135,8 +135,8 @@ struct CatchDetailView: View {
                     .gesture(
                         DragGesture()
                             .onChanged { value in
-                                imageRotationY = Double(value.translation.width) * 0.35
-                                imageRotationX = -Double(value.translation.height) * 0.35
+                                imageRotationY = min(max(Double(value.translation.width) * 0.35, -30), 30)
+                                imageRotationX = min(max(-Double(value.translation.height) * 0.35, -30), 30)
                             }
                             .onEnded { _ in
                                 withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {

@@ -71,7 +71,7 @@ struct CameraGuideView: View {
         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(Color.neutralColorPrimaryWhite.opacity(0.4), lineWidth: 1)
+                .stroke(Color.black.opacity(0.6), lineWidth: 1)
         )
         .overlay(alignment: .topTrailing) {
             CircleIconButton(systemName: "xmark") { dismiss() }

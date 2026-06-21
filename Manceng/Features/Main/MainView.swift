@@ -79,9 +79,9 @@ struct MainView: View {
                         handleCameraTabSelection()
                     } label: {
                         Image(systemName: "camera.fill")
-                            .font(.system(size: 24, weight: .semibold))
+                            .font(.system(size: 20, weight: .semibold))
                             .foregroundColor(.neutralColorPrimaryBlack1)
-                            .frame(width: 60, height: 60)
+                            .frame(width: 72, height: 72)
                             .glassEffect(in: Circle())
                     }
                     .buttonStyle(GlassPressStyle())

@@ -16,7 +16,7 @@ struct CustomButton: View {
         Button(action: action) {
             HStack {
                 Text(title)
-                    .font(.title1Semibold)
+                    .font(.buttonFont)
                     .foregroundColor(.neutralColorPrimaryLemon)
             }
             .frame(width: 363, height: 58, alignment: .center)

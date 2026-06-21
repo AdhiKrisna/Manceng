@@ -117,9 +117,9 @@ struct HomeView: View {
             // Judul nama ikan — sticky di atas.
             VStack {
                 Text(currentCatch?.species ?? "")
-                    .font(.title1Bold)
+                    .font(.largeTitleBlack)
                     .foregroundColor(.neutralColorPrimaryBlack1)
-                    .padding(.top, 8)
+                    .padding(.top, 30)
                 Spacer()
             }
             .allowsHitTesting(false)
@@ -127,7 +127,7 @@ struct HomeView: View {
         .overlay(alignment: .topTrailing) {
             SortButton(selectedSort: $selectedSort)
                 .padding(.trailing, 20)
-                .padding(.top, 8)
+                .padding(.top, 30)
         }
         .onAppear {
             if currentCatchID == nil { currentCatchID = displayedCatches.first?.id }
