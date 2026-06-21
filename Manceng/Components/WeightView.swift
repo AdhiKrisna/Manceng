@@ -12,24 +12,34 @@ import SwiftUI
 
 struct WeightView: View {
     let weight: Double
-    var diameter: CGFloat
+    var diameter: CGFloat?
     /// Berapa bagian lingkaran yang terlihat (0.30 = 30%).
     var visibleFraction: CGFloat
     let fillColor: Color = Color(red: 1, green: 0.9, blue: 0.4)
 
-    init(weight: Double = 6, diameter: CGFloat = 360, visibleFraction: CGFloat = 0.3) {
+    init(weight: Double = 6, diameter: CGFloat? = nil, visibleFraction: CGFloat = 0.3) {
         self.weight = weight
         self.diameter = diameter
         self.visibleFraction = visibleFraction
     }
 
-    init(weight: Int, diameter: CGFloat = 360, visibleFraction: CGFloat = 0.30) {
+    init(weight: Int, diameter: CGFloat? = nil, visibleFraction: CGFloat = 0.30) {
         self.weight = Double(weight)
         self.diameter = diameter
         self.visibleFraction = visibleFraction
     }
 
-    private var capWidth: CGFloat { diameter * visibleFraction }
+    private var resolvedDiameter: CGFloat {
+        if let diameter {
+            return diameter
+        }
+
+        let clampedWeight = max(weight, 0.01)
+        let scaledGrowth = min(sqrt(clampedWeight) * 85, 180)
+        return 300 + scaledGrowth
+    }
+
+    private var capWidth: CGFloat { resolvedDiameter * visibleFraction }
 
     /// Di bawah 100 gram tampilkan dalam satuan gram supaya angka tidak
     /// muncul sebagai "0.0 kg" / "0.1 kg" yang kurang informatif.
@@ -52,26 +62,26 @@ struct WeightView: View {
             // (flat di kanan = tepi layar, lengkung di kiri masuk ke layar).
             Circle()
                 .fill(fillColor)
-                .frame(width: diameter, height: diameter)
-                .frame(width: capWidth, height: diameter, alignment: .leading)
+                .frame(width: resolvedDiameter, height: resolvedDiameter)
+                .frame(width: capWidth, height: resolvedDiameter, alignment: .leading)
                 .clipped()
                 .shadow(color: .black.opacity(0.25), radius: 8, x: -2, y: 0)
 
             // Angka berat (tanpa inner shadow).
             VStack(spacing: 4) {
                 Text(displayWeight)
-                    .font(.system(size: diameter / 10, weight: .bold, design: .default))
+                    .font(.system(size: resolvedDiameter / 10, weight: .bold, design: .default))
                     .foregroundColor(.black)
                     .minimumScaleFactor(0.4)
                     .lineLimit(1)
 
                 Text(displayUnit)
-                    .font(.system(size: diameter / 12, weight: .medium, design: .default))
+                    .font(.system(size: resolvedDiameter / 12, weight: .medium, design: .default))
                     .foregroundColor(.black)
             }
             .frame(width: capWidth)
         }
-        .frame(width: capWidth, height: diameter, alignment: .leading)
+        .frame(width: capWidth, height: resolvedDiameter, alignment: .leading)
     }
 }
 

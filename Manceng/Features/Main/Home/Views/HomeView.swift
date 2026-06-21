@@ -8,7 +8,6 @@
 import SwiftUI
 import SwiftData
 import RealityKit
-import CoreMotion
 import Combine
 
 struct HomeView: View {
@@ -17,11 +16,7 @@ struct HomeView: View {
     // Sort option menggunakan component SortButton
     @State private var selectedSort: SortOption = .latest
 
-    // Gyro untuk memutar FOTO tangkapan (state terisi).
-    @State private var rotationAngle: Angle = .zero
-    @StateObject private var motionManager = MotionManager()
-
-    // Model 3D ikan untuk state kosong (gyro + drag, dapat ditekan).
+    // Model 3D ikan untuk state kosong (drag saja, tanpa gyro).
     @StateObject private var model3DMotion = Model3DMotionManager()
     @State private var interaction = FishInteractionState()
 
@@ -118,11 +113,7 @@ struct HomeView: View {
         }
         .onAppear {
             if currentCatchID == nil { currentCatchID = displayedCatches.first?.id }
-            motionManager.startGyroUpdates { yaw in
-                rotationAngle = .degrees(yaw * 180 / .pi)
-            }
         }
-        .onDisappear { motionManager.stopGyroUpdates() }
         .onChange(of: selectedSort) { _, _ in
             currentCatchID = displayedCatches.first?.id
         }
@@ -145,7 +136,7 @@ struct HomeView: View {
             
             ScrollView(.horizontal) {
                 HStack(spacing: 0) {
-                    if selectedSort == .length {
+                    if selectedSort != .latest {
                         Color.clear.frame(width: currentFishPeek)
                     }
                     
@@ -159,7 +150,6 @@ struct HomeView: View {
                                 .resizable()
                                 .scaledToFit()
                                 .frame(height: fishHeight)
-                                .rotation3DEffect(rotationAngle, axis: (x: 0, y: 1, z: 0))
                                 .shadow(color: isActive ? .black.opacity(0.35) : .clear, radius: isActive ? 18 : 0, x: 0, y: isActive ? 30 : 0)
                             
                             if isActive {
@@ -183,7 +173,7 @@ struct HomeView: View {
                         }
                     }
                     
-                    if selectedSort == .length {
+                    if selectedSort != .latest {
                         Color.clear.frame(width: currentFishPeek)
                     }
                 }
@@ -198,12 +188,11 @@ struct HomeView: View {
     }
     
     private func calculateCurrentFishPeek(screenWidth: CGFloat) -> CGFloat {
-        if selectedSort == .latest {
+        switch selectedSort {
+        case .latest:
             return 0
-        } else if selectedSort == .length {
+        case .length, .weight:
             return screenWidth * 0.25
-        } else {
-            return 130
         }
     }
     
@@ -252,8 +241,6 @@ struct HomeView: View {
                         fillSize: 0.45,
                         allowZoom: false
                     )
-                    .onAppear { model3DMotion.start() }
-                    .onDisappear { model3DMotion.stop() }
                 }
             }
             .frame(height: 320)
@@ -270,32 +257,6 @@ struct HomeView: View {
             }
         }
         .padding(24)
-    }
-}
-
-class MotionManager: ObservableObject {
-    let objectWillChange: ObservableObjectPublisher = ObservableObjectPublisher()
-
-    private let cmManager = CMMotionManager()
-    private let operationQueue = OperationQueue()
-
-    func startGyroUpdates(_ update: @escaping (Double) -> Void) {
-        guard cmManager.isGyroAvailable else { return }
-        cmManager.gyroUpdateInterval = 0.05
-        cmManager.startGyroUpdates(to: operationQueue) { data, error in
-            guard let data = data else { return }
-            DispatchQueue.main.async {
-                update(data.rotationRate.z)
-            }
-        }
-    }
-
-    func stopGyroUpdates() {
-        cmManager.stopGyroUpdates()
-    }
-
-    deinit {
-        cmManager.stopGyroUpdates()
     }
 }
 

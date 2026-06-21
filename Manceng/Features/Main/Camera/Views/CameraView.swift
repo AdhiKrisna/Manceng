@@ -163,13 +163,18 @@ struct CameraView: View {
     }
 
     private var captureScanningMessage: some View {
-        Text("Scanning your fish...")
-            .font(.system(size: 18, weight: .bold))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 22)
-            .padding(.vertical, 14)
-            .background(.black.opacity(0.42), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .shadow(radius: 4)
+        VStack(spacing: 14) {
+            CaptureScanningIndicator()
+
+            Text("Scanning your fish...")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 22)
+        .padding(.vertical, 18)
+        .background(.black.opacity(0.42), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .shadow(radius: 4)
     }
 
     private var permissionBackground: some View {
@@ -291,11 +296,10 @@ private struct CaptureScanningIndicator: View {
         }
         .frame(width: 104, height: 66)
         .background(.black.opacity(0.34), in: Capsule())
-        .task {
+        .onAppear {
             phoneOffset = -18
             scanOpacity = false
             scanScale = 0.88
-            await Task.yield()
 
             withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
                 phoneOffset = 18

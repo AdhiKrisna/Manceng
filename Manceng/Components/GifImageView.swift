@@ -117,14 +117,12 @@ final class AnimatedGifView: UIImageView {
         if let current = self.asset,
            current.frames.first === asset.frames.first,
            current.frames.count == asset.frames.count {
+            restartFromBeginning()
             ensureDisplayLink()
             return
         }
         self.asset = asset
-        currentFrameIndex = 0
-        accumulator = 0
-        lastTimestamp = 0
-        image = asset.frames[0]
+        restartFromBeginning()
         ensureDisplayLink()
     }
 
@@ -151,7 +149,7 @@ final class AnimatedGifView: UIImageView {
         // Advance frame berdasarkan akumulasi waktu — loop kalau delta besar
         // (mis. setelah pause) supaya tidak ada drift.
         var advanced = false
-        while accumulator >= asset.delays[currentFrameIndex] {
+        if accumulator >= asset.delays[currentFrameIndex] {
             accumulator -= asset.delays[currentFrameIndex]
             currentFrameIndex = (currentFrameIndex + 1) % asset.frames.count
             advanced = true
@@ -168,7 +166,17 @@ final class AnimatedGifView: UIImageView {
             displayLink = nil
             lastTimestamp = 0
         } else {
+            restartFromBeginning()
             ensureDisplayLink()
+        }
+    }
+
+    private func restartFromBeginning() {
+        currentFrameIndex = 0
+        accumulator = 0
+        lastTimestamp = 0
+        if let firstFrame = asset?.frames.first {
+            image = firstFrame
         }
     }
 

@@ -36,6 +36,7 @@ final class CameraViewModel: ObservableObject {
     private let weightEstimationService = FishWeightEstimationService()
     private let minimumClassificationConfidence = 0.80
     private let scanIntervalNanoseconds: UInt64 = 900_000_000
+    private let minimumCaptureFeedbackNanoseconds: UInt64 = 650_000_000
     private let cameraGuideSeenKey = "hasSeenCameraGuide"
     private var scanningTask: Task<Void, Never>?
     private var arCoachingTask: Task<Void, Never>?
@@ -96,7 +97,7 @@ final class CameraViewModel: ObservableObject {
         }
 
         guard hasReliableFishMeasurement else {
-            return "Currently measuring the fish length"
+            return "Currently measuring the fish length. . ."
         }
 
         return nil
@@ -282,12 +283,19 @@ final class CameraViewModel: ObservableObject {
             return
         }
 
+        let captureFeedbackStartedAt = DispatchTime.now().uptimeNanoseconds
         isCapturing = true
         isScanningPaused = true
         capturedImage = image
         capturedSegmentedFishes = lockedFishes
         capturedLocation = await catchLocationService.requestCurrentLocation()
         shouldPromptLocationSettingsInReview = catchLocationService.isAuthorizationDenied
+
+        let elapsedNanoseconds = DispatchTime.now().uptimeNanoseconds - captureFeedbackStartedAt
+        if elapsedNanoseconds < minimumCaptureFeedbackNanoseconds {
+            try? await Task.sleep(nanoseconds: minimumCaptureFeedbackNanoseconds - elapsedNanoseconds)
+        }
+
         isCapturing = false
         errorMessage = nil
         showReview = true
