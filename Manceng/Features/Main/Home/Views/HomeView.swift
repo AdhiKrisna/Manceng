@@ -142,7 +142,8 @@ struct HomeView: View {
                     
                     ForEach(displayedCatches) { c in
                         let lengthCm = max(1, Int(c.length.rounded()))
-                        let fishHeight = min(max(CGFloat(lengthCm) * 7, 340), 520)
+                        let rulerLengthCm = min(lengthCm, 60)
+                        let fishHeight = CGFloat(rulerLengthCm) * 8
                         let isActive = currentCatchID == c.id
                         
                         VStack(spacing: 0) {
@@ -151,25 +152,27 @@ struct HomeView: View {
                                 .scaledToFit()
                                 .frame(height: fishHeight)
                                 .shadow(color: isActive ? .black.opacity(0.35) : .clear, radius: isActive ? 18 : 0, x: 0, y: isActive ? 30 : 0)
-                            
-                            if isActive {
-                                Ellipse()
-                                    .fill(.black.opacity(0.22))
-                                    .blur(radius: 16)
-                                    .frame(width: 210, height: 34)
-                                    .padding(.top, 18)
-                            }
+                                .overlay(alignment: .bottom) {
+                                    if isActive {
+                                        Ellipse()
+                                            .fill(.black.opacity(0.22))
+                                            .blur(radius: 16)
+                                            .frame(width: 120, height: 25)
+                                            .offset(y: 52)
+                                            .allowsHitTesting(false)
+                                    }
+                                }
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    detailCatch = c
+                                    showDetail = true
+                                }
                         }
                         .frame(width: itemWidth, height: geo.size.height)
                         .scrollTransition { content, phase in
                             content.opacity(phase.isIdentity ? 1 : transitionOpacity)
                                 .scaleEffect(phase.isIdentity ? 1 : transitionScale)
                                 .offset(y: phase.isIdentity ? 0 : transitionYOffset)
-                        }
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            detailCatch = c
-                            showDetail = true
                         }
                     }
                     

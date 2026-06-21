@@ -27,9 +27,8 @@ struct RulerView: View {
         self.cmSpacing = cmSpacing
     }
 
-    private var visualCm: Int { min(maxCm, maxVisualCm) }
-    private var tickHeight: CGFloat { CGFloat(visualCm) * cmSpacing }
-    private var pointsPerCm: CGFloat { tickHeight / CGFloat(maxCm) }
+    private var rulerMaxCm: Int { min(maxCm, 60) }
+    private var tickHeight: CGFloat { CGFloat(rulerMaxCm) * cmSpacing }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -38,8 +37,8 @@ struct RulerView: View {
 
             // Area tick: 0 di bawah, maxCm di atas. Jarak antar-cm konstan.
             Canvas { context, size in
-                for cm in 0...maxCm {
-                    let y = CGFloat(maxCm - cm) * pointsPerCm
+                for cm in 0...rulerMaxCm {
+                    let y = CGFloat(rulerMaxCm - cm) * cmSpacing
 
                     let tickLen: CGFloat
                     let lineWidth: CGFloat
@@ -81,7 +80,7 @@ struct RulerView: View {
 
 #Preview {
     HStack(spacing: 40) {
-        RulerView(maxCm: 80)
+        RulerView(maxCm: 65)
         RulerView(maxCm: 40)
     }
     .padding()
