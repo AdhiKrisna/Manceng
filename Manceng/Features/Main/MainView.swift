@@ -68,8 +68,8 @@ struct MainView: View {
                             tab: .history
                         )
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 8)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 4)
                     .glassEffect(in: Capsule())
                     // .glassEffect(.regular.interactive(), in: Capsule())
                     .frame(maxWidth: .infinity)
@@ -79,9 +79,9 @@ struct MainView: View {
                         handleCameraTabSelection()
                     } label: {
                         Image(systemName: "camera.fill")
-                            .font(.system(size: 20, weight: .semibold))
+                            .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(.neutralColorPrimaryBlack1)
-                            .frame(width: 72, height: 72)
+                            .frame(width: 60, height: 60)
                             .glassEffect(in: Circle())
                     }
                     .buttonStyle(GlassPressStyle())
@@ -141,8 +141,8 @@ struct MainView: View {
                 Text(title)
                     .font(.system(size: 11, weight: .semibold))
             }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 14)
+            .padding(.vertical, 5)
+            .padding(.horizontal, 12)
             .frame(maxWidth: .infinity)
             .background {
                 if isSelected {

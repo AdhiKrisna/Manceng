@@ -30,7 +30,7 @@ struct HistoryView: View {
         VStack {
             header
                 .padding(.horizontal, 20)
-                .padding(.vertical, 30)
+                .padding(.top, 30)
             Spacer()
             if catches.isEmpty {
                 VStack {
@@ -67,7 +67,7 @@ struct HistoryView: View {
                 SortButton(selectedSort: $viewModel.selectedSort)
             }
         }
-        .frame(height: 40)
+        .frame(height: 43)
     }
 
     private var emptyState: some View {

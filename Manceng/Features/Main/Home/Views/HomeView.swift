@@ -102,6 +102,7 @@ struct HomeView: View {
                     RulerView(maxCm: max(1, Int(c.length.rounded())))
                     Spacer()
                 }
+                .animation(.spring(response: 0.55, dampingFraction: 0.88), value: c.length)
                 .allowsHitTesting(false)
             }
 
@@ -111,6 +112,7 @@ struct HomeView: View {
                     Spacer()
                     WeightView(weight: c.weight)
                 }
+                .animation(.spring(response: 0.55, dampingFraction: 0.88), value: c.weight)
                 .allowsHitTesting(false)
             }
 
@@ -175,14 +177,10 @@ struct HomeView: View {
             
             ScrollView(.horizontal) {
                 HStack(spacing: 0) {
-                    if selectedSort != .latest {
-                        Color.clear.frame(width: currentFishPeek)
-                    }
-                    
                     ForEach(displayedCatches) { c in
                         let lengthCm = max(1, Int(c.length.rounded()))
                         let rulerLengthCm = min(lengthCm, 60)
-                        let fishHeight = CGFloat(rulerLengthCm) * 8
+                        let fishHeight = 240 + (CGFloat(rulerLengthCm) / 60) * 240
                         let isActive = currentCatchID == c.id
                         
                         VStack(spacing: 0) {
@@ -194,10 +192,6 @@ struct HomeView: View {
                                 .scaleEffect(phase.isIdentity ? 1 : transitionScale)
                                 .offset(y: phase.isIdentity ? 0 : transitionYOffset)
                         }
-                    }
-                    
-                    if selectedSort != .latest {
-                        Color.clear.frame(width: currentFishPeek)
                     }
                 }
                 .scrollTargetLayout()
@@ -217,12 +211,7 @@ struct HomeView: View {
         if isActive {
             TimelineView(.periodic(from: .now, by: 1.0 / 60.0)) { _ in
                 let tilt = currentTilt()
-                // Dua bayangan terpisah, TIDAK ikut rotasi 3D ikan:
-                //  • backShadow  = layer paling belakang, bergerak BERLAWANAN
-                //    arah ikan → kesan kedalaman/parallax.
-                //  • contactShadow = bayangan di bawah ikan yang IKUT posisi ikan.
                 ZStack(alignment: .bottom) {
-                    backShadow(tilt: tilt)
                     contactShadow(tilt: tilt)
                     fishImageOnly(c: c, fishHeight: fishHeight, isActive: true)
                         .offset(x: tilt.parallaxX, y: tilt.parallaxY)
@@ -240,7 +229,6 @@ struct HomeView: View {
             .resizable()
             .scaledToFit()
             .frame(height: fishHeight)
-            .shadow(color: isActive ? .black.opacity(0.35) : .clear, radius: isActive ? 18 : 0, x: 0, y: isActive ? 30 : 0)
             .contentShape(Rectangle())
             .onTapGesture {
                 detailCatch = c
@@ -336,11 +324,11 @@ struct HomeView: View {
 
             VStack(spacing: 8) {
                 Text("No catches recorded yet!")
-                    .font(.title1Semibold)
+                    .font(.caption1Bold)
                     .foregroundColor(.neutralColorPrimaryBlack1)
 
                 Text("Tap camera button below to get started!")
-                    .font(.caption1Bold)
+                    .font(.captionRegular)
                     .foregroundColor(.neutralColorPrimaryBlack1.opacity(0.7))
                     .multilineTextAlignment(.center)
             }
