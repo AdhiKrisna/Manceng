@@ -98,6 +98,7 @@ struct ShareTemplatesView: View {
         let cardSpacing: CGFloat = 14
         let cardWidth = min(screenWidth - 56, height * ShareTemplateCard.aspectRatio)
         let sideInset = max(20, (screenWidth - cardWidth) / 2)
+        let shadowPadding: CGFloat = 28
 
         return ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: cardSpacing) {
@@ -108,6 +109,11 @@ struct ShareTemplatesView: View {
                         content: viewModel.displayContent(for: template)
                     )
                     .frame(width: cardWidth, height: height)
+                    .background {
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .fill(.black.opacity(0.18))
+                            .shadow(color: .black.opacity(0.24), radius: 20, x: 0, y: 14)
+                    }
                     // Center card stays full size; side cards shrink + dim.
                     .scrollTransition(.interactive) { content, phase in
                         content
@@ -117,12 +123,13 @@ struct ShareTemplatesView: View {
                     .id(index)
                 }
             }
+            .padding(.vertical, shadowPadding)
             .scrollTargetLayout()
         }
         .contentMargins(.horizontal, sideInset, for: .scrollContent)
         .scrollTargetBehavior(.viewAligned)
         .scrollPosition(id: $viewModel.scrollPositionID)
-        .frame(height: height)
+        .frame(height: height + shadowPadding * 2)
         .onChange(of: viewModel.scrollPositionID) { _, newValue in
             guard let newValue else { return }
             viewModel.currentPageIndex = newValue
@@ -452,6 +459,7 @@ struct ShareTemplateCard: View {
     let template: ShareTemplate
     let fishImage: UIImage
     let content: ShareTemplateDisplayContent
+    var rendersShadows = true
 
     var body: some View {
         GeometryReader { proxy in
@@ -565,7 +573,7 @@ struct ShareTemplateCard: View {
                 .foregroundStyle(.white)
                 .lineLimit(1)
                 .minimumScaleFactor(0.3)
-                .shadow(color: .black.opacity(0.28), radius: 4, x: 0, y: 2)
+                .shadow(color: .black.opacity(rendersShadows ? 0.28 : 0), radius: rendersShadows ? 4 : 0, x: 0, y: rendersShadows ? 2 : 0)
                 .frame(width: size.width * 0.94)
                 .position(x: size.width * 0.5, y: size.height * 0.515)
 
@@ -688,11 +696,17 @@ struct ShareTemplateRenderCard: View {
     let content: ShareTemplateDisplayContent
 
     var body: some View {
-        ShareTemplateCard(
-            template: template,
-            fishImage: fishImage,
-            content: content
-        )
+        ZStack {
+            template.backgroundColor
+
+            ShareTemplateCard(
+                template: template,
+                fishImage: fishImage,
+                content: content,
+                rendersShadows: false
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 96, style: .continuous))
+        }
         .frame(width: 1080, height: 2036)
     }
 }

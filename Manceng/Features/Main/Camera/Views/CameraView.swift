@@ -138,6 +138,7 @@ struct CameraView: View {
                 viewModel.presentCameraGuide()
             }
         }
+        .padding(.top, 8)
     }
 
     private var centerInstruction: some View {

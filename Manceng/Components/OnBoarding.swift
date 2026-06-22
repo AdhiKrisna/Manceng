@@ -14,13 +14,15 @@ struct OnBoarding: View {
     let caption: String
     let imageSize: CGSize?
     let containerSize: CGSize?
+    let imageOffsetY: CGFloat
     
-    init(image: Image, title: String, caption: String, imageSize: CGSize? = nil, containerSize: CGSize? = nil) {
+    init(image: Image, title: String, caption: String, imageSize: CGSize? = nil, containerSize: CGSize? = nil, imageOffsetY: CGFloat = 0) {
         self.image = image
         self.title = title
         self.caption = caption
         self.imageSize = imageSize
         self.containerSize = containerSize
+        self.imageOffsetY = imageOffsetY
     }
     
     var body: some View {
@@ -33,11 +35,13 @@ struct OnBoarding: View {
                             .resizable()
                             .scaledToFit()
                             .frame(width: size.width, height: size.height)
+                            .offset(y: imageOffsetY)
                     } else {
                         image
                             .resizable()
                             .scaledToFit()
                             .frame(maxWidth: .infinity)
+                            .offset(y: imageOffsetY)
                     }
                 }
                 .frame(width: containerSize.width, height: containerSize.height)
@@ -48,11 +52,13 @@ struct OnBoarding: View {
                         .resizable()
                         .scaledToFit()
                         .frame(width: size.width, height: size.height)
+                        .offset(y: imageOffsetY)
                 } else {
                     image
                         .resizable()
                         .scaledToFit()
                         .frame(maxWidth: .infinity)
+                        .offset(y: imageOffsetY)
                 }
             }
 
@@ -86,4 +92,3 @@ struct OnBoarding: View {
         )
     }
 }
-

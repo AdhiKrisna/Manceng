@@ -39,7 +39,7 @@ struct WeightView: View {
         return 300 + scaledGrowth
     }
 
-    private var capWidth: CGFloat { resolvedDiameter * visibleFraction }
+    private var capWidth: CGFloat { (diameter ?? 300) * visibleFraction }
 
     /// Di bawah 100 gram tampilkan dalam satuan gram supaya angka tidak
     /// muncul sebagai "0.0 kg" / "0.1 kg" yang kurang informatif.
@@ -65,7 +65,6 @@ struct WeightView: View {
                 .frame(width: resolvedDiameter, height: resolvedDiameter)
                 .frame(width: capWidth, height: resolvedDiameter, alignment: .leading)
                 .clipped()
-                .shadow(color: .black.opacity(0.25), radius: 8, x: -2, y: 0)
 
             // Angka berat (tanpa inner shadow).
             VStack(spacing: 4) {
@@ -74,14 +73,17 @@ struct WeightView: View {
                     .foregroundColor(.black)
                     .minimumScaleFactor(0.4)
                     .lineLimit(1)
+                    .contentTransition(.numericText())
 
                 Text(displayUnit)
                     .font(.system(size: resolvedDiameter / 12, weight: .medium, design: .default))
                     .foregroundColor(.black)
+                    .contentTransition(.opacity)
             }
             .frame(width: capWidth)
         }
         .frame(width: capWidth, height: resolvedDiameter, alignment: .leading)
+        .animation(.spring(response: 0.55, dampingFraction: 0.88), value: weight)
     }
 }
 

@@ -60,6 +60,7 @@ struct RulerView: View {
                 }
             }
             .frame(width: tickAreaWidth, height: tickHeight)
+            .animation(.spring(response: 0.55, dampingFraction: 0.88), value: rulerMaxCm)
 
             // Label paling bawah = 0 (lebih pudar, seperti desain).
             label(0, faded: true)
@@ -71,10 +72,12 @@ struct RulerView: View {
         HStack(alignment: .firstTextBaseline, spacing: 3) {
             Text("\(value)")
                 .font(.system(size: 30, weight: .bold))
+                .contentTransition(.numericText())
             Text("cm")
                 .font(.system(size: 13, weight: .semibold))
         }
         .foregroundStyle(Color.black.opacity(faded ? 0.45 : 1.0))
+        .padding(.leading, 8)
     }
 }
 
