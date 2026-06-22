@@ -164,18 +164,7 @@ struct CameraView: View {
     }
 
     private var captureScanningMessage: some View {
-        VStack(spacing: 14) {
-            CaptureScanningIndicator()
-
-            Text("Scanning your fish...")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(.white)
-                .multilineTextAlignment(.center)
-        }
-        .padding(.horizontal, 22)
-        .padding(.vertical, 18)
-        .background(.black.opacity(0.42), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .shadow(radius: 4)
+        CaptureScanningMessage()
     }
 
     private var permissionBackground: some View {
@@ -231,11 +220,6 @@ struct CameraView: View {
                     .background(.red.opacity(0.7), in: Capsule())
             }
 
-            if viewModel.isCapturing {
-                captureLoadingIndicator
-                    .transition(.opacity)
-            }
-
             Button {
                 Task {
                     await viewModel.capture()
@@ -256,10 +240,6 @@ struct CameraView: View {
         }
     }
 
-    private var captureLoadingIndicator: some View {
-        CaptureScanningIndicator()
-    }
-
     private var captureButtonFill: Color {
         if viewModel.isCapturing {
             return Color.white.opacity(0.55)
@@ -269,52 +249,74 @@ struct CameraView: View {
     }
 }
 
-private struct CaptureScanningIndicator: View {
-    @State private var phoneOffset: CGFloat = -18
-    @State private var scanOpacity = false
-    @State private var scanScale: CGFloat = 0.88
+private struct CaptureScanningMessage: View {
+    @State private var showSlowNotice = false
 
     var body: some View {
-        ZStack {
+        VStack(spacing: 14) {
+            CaptureScanningIndicator()
+
+            Text("Scanning your fish...")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+
+            if showSlowNotice {
+                Text("Scanning mungkin butuh waktu agak lama untuk pertama kali")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .transition(.opacity)
+            }
+        }
+        .padding(.horizontal, 22)
+        .padding(.vertical, 18)
+        .background(.black.opacity(0.42), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .shadow(radius: 4)
+        .task {
+            showSlowNotice = false
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            guard !Task.isCancelled else { return }
+
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showSlowNotice = true
+            }
+        }
+    }
+}
+
+private struct CaptureScanningIndicator: View {
+    var body: some View {
+        TimelineView(.periodic(from: Date(), by: 1.0 / 30.0)) { context in
+            let seconds = context.date.timeIntervalSinceReferenceDate
+            let phoneOffset = CGFloat(sin(seconds * .pi / 0.8) * 18)
+            let scanPulse = (sin(seconds * 2 * .pi / 0.9) + 1) / 2
+            let scanOpacity = 0.26 + (scanPulse * 0.56)
+            let scanScale = CGFloat(0.88 + (scanPulse * 0.20))
+
             ZStack {
-                RoundedRectangle(cornerRadius: 3, style: .continuous)
-                    .fill(Color.white.opacity(scanOpacity ? 0.82 : 0.26))
-                    .frame(width: 58, height: 3)
-                    .scaleEffect(x: scanScale, anchor: .center)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(Color.white.opacity(scanOpacity))
+                        .frame(width: 58, height: 3)
+                        .scaleEffect(x: scanScale, anchor: .center)
 
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(Color.white.opacity(0.92), lineWidth: 2)
-                    .frame(width: 28, height: 46)
-                    .overlay(alignment: .top) {
-                        Capsule()
-                            .fill(Color.white.opacity(0.75))
-                            .frame(width: 10, height: 2)
-                            .padding(.top, 5)
-                    }
-                    .offset(x: phoneOffset)
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(Color.white.opacity(0.92), lineWidth: 2)
+                        .frame(width: 28, height: 46)
+                        .overlay(alignment: .top) {
+                            Capsule()
+                                .fill(Color.white.opacity(0.75))
+                                .frame(width: 10, height: 2)
+                                .padding(.top, 5)
+                        }
+                        .offset(x: phoneOffset)
+                }
+                .frame(width: 88, height: 54)
             }
-            .frame(width: 88, height: 54)
-        }
-        .frame(width: 104, height: 66)
-        .background(.black.opacity(0.34), in: Capsule())
-        .onAppear {
-            phoneOffset = -18
-            scanOpacity = false
-            scanScale = 0.88
-
-            withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
-                phoneOffset = 18
-            }
-
-            withAnimation(.easeInOut(duration: 0.45).repeatForever(autoreverses: true)) {
-                scanOpacity = true
-                scanScale = 1.08
-            }
-        }
-        .onDisappear {
-            phoneOffset = -18
-            scanOpacity = false
-            scanScale = 0.88
+            .frame(width: 104, height: 66)
+            .background(.black.opacity(0.34), in: Capsule())
         }
     }
 }

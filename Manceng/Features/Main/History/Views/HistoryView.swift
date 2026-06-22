@@ -33,7 +33,7 @@ struct HistoryView: View {
             Spacer()
             if catches.isEmpty {
                 VStack {
-                    emptyState.padding(.bottom, 100)
+                    emptyState.padding(.bottom, 75)
 
                 }
             } else {
@@ -76,13 +76,13 @@ struct HistoryView: View {
 
             VStack(spacing: 8) {
                 Text("No catches recorded yet!")
-                    .font(.title1Semibold)
+                    .font(.caption1Bold)
                     .foregroundColor(.neutralColorPrimaryBlack1)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
 
                 Text("Tap camera button below to get started!")
-                    .font(.caption1Bold)
+                    .font(.captionRegular)
                     .foregroundColor(.neutralColorPrimaryBlack1.opacity(0.7))
                     .multilineTextAlignment(.center)
                     .lineLimit(2)

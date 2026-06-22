@@ -100,7 +100,7 @@ final class CameraViewModel: ObservableObject {
             return false
         }
 
-        return FishMaskOrientationAnalyzer.analyze(maskImage: segmentedFish.maskImage)?.isHeadAllowedForCapture == true
+        return segmentedFish.orientationAnalysis?.isHeadAllowedForCapture == true
     }
 
     private var hasReliableFishMeasurement: Bool {
@@ -285,7 +285,7 @@ final class CameraViewModel: ObservableObject {
             return
         }
         guard let lockedFish = lockedFishes.first,
-              FishMaskOrientationAnalyzer.analyze(maskImage: lockedFish.maskImage)?.isHeadAllowedForCapture == true else {
+              lockedFish.orientationAnalysis?.isHeadAllowedForCapture == true else {
             errorMessage = "Turn the fish so its head faces left"
             return
         }
@@ -300,7 +300,9 @@ final class CameraViewModel: ObservableObject {
 
         let captureFeedbackStartedAt = DispatchTime.now().uptimeNanoseconds
         isCapturing = true
+        stopScanning()
         isScanningPaused = true
+        arService.setFramePublishingEnabled(false)
         capturedImage = image
         capturedSegmentedFishes = lockedFishes
         capturedLocation = await catchLocationService.requestCurrentLocation()
@@ -323,9 +325,13 @@ final class CameraViewModel: ObservableObject {
         capturedLocation = nil
         shouldPromptLocationSettingsInReview = false
         isScanningPaused = false
+        arService.setFramePublishingEnabled(true)
         isCapturing = false
         errorMessage = nil
         showUnknownSpeciesAlert = false
+        Task {
+            await startScanning()
+        }
     }
 
     private func scanCurrentFrame() async {
@@ -344,6 +350,11 @@ final class CameraViewModel: ObservableObject {
         isScanningFish = true
 
         let fishes = await segment(image: image)
+        guard !Task.isCancelled else {
+            isScanningFish = false
+            return
+        }
+
         var enriched = fishes
         guard enriched.count == 1 else {
             scannedImage = image
@@ -353,18 +364,28 @@ final class CameraViewModel: ObservableObject {
         }
 
         for index in enriched.indices {
-            let classification = await classify(
+            let boundingBox = enriched[index].fish.boundingBox
+            let maskImage = enriched[index].maskImage
+            async let classification = classify(
                 image: image,
-                boundingBox: enriched[index].fish.boundingBox
+                boundingBox: boundingBox
             )
-            let speciesName = classification?.speciesName ?? "Fish class unavailable"
+            async let orientationAnalysis = analyzeOrientation(maskImage: maskImage)
+            let classificationResult = await classification
+            guard !Task.isCancelled else {
+                isScanningFish = false
+                return
+            }
+
+            let speciesName = classificationResult?.speciesName ?? "Fish class unavailable"
             let length = arService.estimateLengthCm(
                 for: enriched[index].fish.boundingBox,
                 imageSize: image.size
             )
             enriched[index].fish.estimatedLengthCm = length
             enriched[index].fish.species = speciesName
-            enriched[index].fish.speciesConfidence = classification?.confidence
+            enriched[index].fish.speciesConfidence = classificationResult?.confidence
+            enriched[index].orientationAnalysis = await orientationAnalysis
 
             if let length {
                 enriched[index].fish.estimatedWeightKg =
@@ -373,6 +394,11 @@ final class CameraViewModel: ObservableObject {
             } else {
                 enriched[index].fish.estimatedWeightKg = nil
             }
+        }
+
+        guard !Task.isCancelled else {
+            isScanningFish = false
+            return
         }
 
         scannedImage = image
@@ -394,6 +420,15 @@ final class CameraViewModel: ObservableObject {
         return await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 let result = classificationService.classify(image: image, boundingBox: boundingBox)
+                continuation.resume(returning: result)
+            }
+        }
+    }
+
+    private func analyzeOrientation(maskImage: UIImage) async -> FishMaskOrientationAnalyzer.Analysis? {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let result = FishMaskOrientationAnalyzer.analyze(maskImage: maskImage)
                 continuation.resume(returning: result)
             }
         }

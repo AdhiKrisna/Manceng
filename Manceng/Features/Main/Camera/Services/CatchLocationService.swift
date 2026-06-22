@@ -17,7 +17,7 @@ final class CatchLocationService: NSObject, CLLocationManagerDelegate {
     private var cachedMetadata: CatchLocationMetadata?
     private var cachedMetadataDate: Date?
     private let cachedMetadataLifetime: TimeInterval = 300
-    private let locationRequestTimeoutNanoseconds: UInt64 = 1_200_000_000
+    private let locationRequestTimeoutNanoseconds: UInt64 = 6_000_000_000
 
     var isAuthorizationDenied: Bool {
         manager.authorizationStatus == .denied || manager.authorizationStatus == .restricted
@@ -100,7 +100,9 @@ final class CatchLocationService: NSObject, CLLocationManagerDelegate {
     private func handleLocationUpdate(_ location: CLLocation) async {
         guard continuation != nil || validCachedMetadata == nil else { return }
 
-        let displayName = await reverseGeocode(location) ?? cachedMetadata?.displayName ?? "Unknown"
+        let displayName = await reverseGeocode(location)
+            ?? cachedMetadata?.displayName
+            ?? coordinateText(for: location)
         let metadata = CatchLocationMetadata(
             latitude: location.coordinate.latitude,
             longitude: location.coordinate.longitude,
@@ -138,15 +140,6 @@ final class CatchLocationService: NSObject, CLLocationManagerDelegate {
     }
 
     private func reverseGeocode(_ location: CLLocation) async -> String? {
-        if #unavailable(iOS 26.0) {
-            return await reverseGeocodeWithCoreLocation(location)
-        }
-
-        return await reverseGeocodeWithMapKit(location)
-    }
-
-    @available(iOS 26.0, *)
-    private func reverseGeocodeWithMapKit(_ location: CLLocation) async -> String? {
         let request = MKReverseGeocodingRequest(location: location)
         guard let mapItem = try? await request?.mapItems.first else {
             return nil
@@ -167,39 +160,6 @@ final class CatchLocationService: NSObject, CLLocationManagerDelegate {
         return cleanAddressComponent(mapItem.name)
     }
 
-    @available(iOS, deprecated: 26.0)
-    private func reverseGeocodeWithCoreLocation(_ location: CLLocation) async -> String? {
-        let geocoder = CLGeocoder()
-        guard let placemark = try? await geocoder.reverseGeocodeLocation(location).first else {
-            return nil
-        }
-
-        return displayName(for: placemark)
-    }
-
-    private func displayName(for placemark: CLPlacemark) -> String? {
-        let primaryPlace = [
-            placemark.areasOfInterest?.first,
-            placemark.inlandWater,
-            placemark.ocean,
-            placemark.name,
-            placemark.subLocality,
-            placemark.thoroughfare
-        ].compactMap { cleanAddressComponent($0) }
-            .first { !isGenericAddressComponent($0, in: placemark) }
-
-        let city = cleanAddressComponent(placemark.locality)
-        if let primaryPlace {
-            if let city, city != primaryPlace {
-                return "\(primaryPlace), \(city)"
-            }
-
-            return primaryPlace
-        }
-
-        return city
-    }
-
     private func cleanAddressComponent(_ value: String?) -> String? {
         guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else {
             return nil
@@ -207,19 +167,16 @@ final class CatchLocationService: NSObject, CLLocationManagerDelegate {
         return value
     }
 
-    private func isGenericAddressComponent(_ value: String, in placemark: CLPlacemark) -> Bool {
-        let genericComponents = [
-            placemark.locality,
-            placemark.subAdministrativeArea,
-            placemark.administrativeArea,
-            placemark.country
-        ].compactMap { cleanAddressComponent($0) }
-
-        return genericComponents.contains(value)
-    }
-
     private func isCoordinateLikeAddress(_ value: String) -> Bool {
         value.range(of: #"^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$"#, options: .regularExpression) != nil
+    }
+
+    private func coordinateText(for location: CLLocation) -> String {
+        String(
+            format: "%.5f, %.5f",
+            location.coordinate.latitude,
+            location.coordinate.longitude
+        )
     }
 
     private func condensedPlaceName(_ value: String, city: String? = nil) -> String {

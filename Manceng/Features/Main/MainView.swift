@@ -80,7 +80,7 @@ struct MainView: View {
                         handleCameraTabSelection()
                     } label: {
                         Image(systemName: "camera.fill")
-                            .font(.system(size: 18, weight: .semibold))
+                            .font(.system(size: 20, weight: .semibold))
                             .foregroundColor(.neutralColorPrimaryBlack1)
                             .frame(width: 60, height: 60)
                             .glassEffect(in: Circle())

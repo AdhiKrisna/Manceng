@@ -11,4 +11,5 @@ struct SegmentedFish: Identifiable {
     let id = UUID()
     var fish: DetectedFish
     let maskImage: UIImage
+    var orientationAnalysis: FishMaskOrientationAnalyzer.Analysis?
 }

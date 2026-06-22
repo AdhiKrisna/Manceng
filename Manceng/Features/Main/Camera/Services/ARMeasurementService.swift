@@ -30,6 +30,9 @@ final class ARMeasurementService: NSObject, ObservableObject {
     private var shouldSkipProjectedMeasurement = false
     private let minimumMeasurementDistanceMeters: Float = 0.08
     private let maximumMeasurementDistanceMeters: Float = 1.2
+    private let framePublishInterval: TimeInterval = 0.2
+    private var lastFramePublishTimestamp: TimeInterval = 0
+    private var isFramePublishingEnabled = true
 
     private struct SurfaceHit {
         let position: SIMD3<Float>
@@ -52,22 +55,28 @@ final class ARMeasurementService: NSObject, ObservableObject {
 
     func start() {
         guard let sceneView else {
-            trackingStateText = "Camera view not ready"
-            isARReady = false
+            publishState { service in
+                service.trackingStateText = "Camera view not ready"
+                service.isARReady = false
+            }
             return
         }
 
         guard !isSessionRunning else { return }
         guard ARWorldTrackingConfiguration.isSupported else {
-            trackingStateText = "AR not supported"
-            isARReady = false
-            sessionErrorMessage = "This device does not support ARKit world tracking."
+            publishState { service in
+                service.trackingStateText = "AR not supported"
+                service.isARReady = false
+                service.sessionErrorMessage = "This device does not support ARKit world tracking."
+            }
             return
         }
 
         let configuration = ARWorldTrackingConfiguration()
         configuration.planeDetection = [.horizontal, .vertical]
-        sessionErrorMessage = nil
+        publishState { service in
+            service.sessionErrorMessage = nil
+        }
         sceneView.session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
         isSessionRunning = true
     }
@@ -75,8 +84,14 @@ final class ARMeasurementService: NSObject, ObservableObject {
     func stop() {
         sceneView?.session.pause()
         isSessionRunning = false
-        isARReady = false
         hasDetectedPlane = false
+        publishState { service in
+            service.isARReady = false
+        }
+    }
+
+    func setFramePublishingEnabled(_ isEnabled: Bool) {
+        isFramePublishingEnabled = isEnabled
     }
 
     func captureImage() -> UIImage? {
@@ -364,7 +379,7 @@ final class ARMeasurementService: NSObject, ObservableObject {
         }
     }
 
-    private func planeDetectionState(from frame: ARFrame) -> (hasPlane: Bool, distance: Double?) {
+    nonisolated private func planeDetectionState(from frame: ARFrame) -> (hasPlane: Bool, distance: Double?) {
         let cameraTransform = frame.camera.transform
         let cameraPosition = SIMD3<Float>(
             cameraTransform.columns.3.x,
@@ -390,7 +405,7 @@ final class ARMeasurementService: NSObject, ObservableObject {
         return (hasPlane, distance)
     }
 
-    private func guidance(for trackingState: ARCamera.TrackingState, hasPlane: Bool, distance: Double?) -> String {
+    nonisolated private func guidance(for trackingState: ARCamera.TrackingState, hasPlane: Bool, distance: Double?) -> String {
         switch trackingState {
         case .notAvailable:
             return "Move your phone to start"
@@ -430,6 +445,13 @@ final class ARMeasurementService: NSObject, ObservableObject {
             height: height
         )
     }
+
+    private func publishState(_ updates: @escaping (ARMeasurementService) -> Void) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            updates(self)
+        }
+    }
 }
 
 // MARK: - ARSessionDelegate
@@ -464,32 +486,42 @@ extension ARMeasurementService: ARSessionDelegate {
         let fx = intrinsics[0][0]
         let fy = intrinsics[1][1]
         let imageRes = frame.camera.imageResolution
+        let planeState = planeDetectionState(from: frame)
+        let guidanceText = guidance(
+            for: frame.camera.trackingState,
+            hasPlane: planeState.hasPlane,
+            distance: planeState.distance
+        )
+        let trackingIsNormal: Bool
+        if case .normal = frame.camera.trackingState {
+            trackingIsNormal = true
+        } else {
+            trackingIsNormal = false
+        }
+        let isReady = trackingIsNormal && planeState.hasPlane
 
         Task { @MainActor in
-            let planeState = self.planeDetectionState(from: frame)
+            self.focalLengthPixels = fx
+            self.focalLengthYPixels = fy
+            self.cameraImageResolution = imageRes
+
+            guard self.isFramePublishingEnabled else { return }
+
+            let shouldPublish = frame.timestamp - self.lastFramePublishTimestamp >= self.framePublishInterval
+                || self.isARReady != isReady
+                || self.measurementGuidance != guidanceText
+                || self.distanceMeters != planeState.distance
+            guard shouldPublish else { return }
+
+            self.lastFramePublishTimestamp = frame.timestamp
             self.hasDetectedPlane = planeState.hasPlane
             self.distanceMeters = planeState.distance
-            self.measurementGuidance = self.guidance(
-                for: frame.camera.trackingState,
-                hasPlane: planeState.hasPlane,
-                distance: planeState.distance
-            )
-
-            let trackingIsNormal: Bool
-            if case .normal = frame.camera.trackingState {
-                trackingIsNormal = true
-            } else {
-                trackingIsNormal = false
-            }
-
-            self.isARReady = trackingIsNormal && planeState.hasPlane
+            self.measurementGuidance = guidanceText
+            self.isARReady = isReady
             self.trackingStateText = self.isARReady ? "AR On" : "AR Off"
             if self.isARReady {
                 self.sessionErrorMessage = nil
             }
-            self.focalLengthPixels = fx
-            self.focalLengthYPixels = fy
-            self.cameraImageResolution = imageRes
         }
     }
 }
