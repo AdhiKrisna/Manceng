@@ -68,7 +68,8 @@ struct CatchReviewView: View {
                 species: viewModel.fishName,
                 weight: viewModel.weightValue,
                 length: viewModel.lengthValue,
-                location: viewModel.locationDisplayText
+                location: viewModel.locationDisplayText,
+                capturedAt: viewModel.capturedAt
             )
         }
         .alert("Location access unavailable", isPresented: $viewModel.showLocationSettingsAlert) {

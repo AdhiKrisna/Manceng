@@ -23,10 +23,12 @@ final class CameraViewModel: ObservableObject {
     @Published var isCapturing = false
     @Published var errorMessage: String?
     @Published var showPermissionAlert = false
+    @Published var showLocationSettingsAlert = false
     @Published var showUnknownSpeciesAlert = false
     @Published var showCameraGuide = false
     @Published var shouldShowARCoaching = true
     private var isScanningPaused = false
+    private var didRequestLocationPermissionForSession = false
 
     let arService = ARMeasurementService()
     private let permissionService = CameraPermissionService()
@@ -81,7 +83,7 @@ final class CameraViewModel: ObservableObject {
         case .invalidOrientation:
             return "Currently the fish head is outside the allowed angle"
         case .measuringLength:
-            return "Currently measuring the fish length. . ."
+            return "Currently making sure the fish is ready to measure..."
         }
     }
 
@@ -154,7 +156,7 @@ final class CameraViewModel: ObservableObject {
 
         showPermissionAlert = shouldShowPermissionAlert
         if cameraPermissionState.canUseCamera {
-            catchLocationService.warmUpIfAuthorized()
+            await prepareLocationPermissionForCameraEntryIfNeeded()
         }
     }
 
@@ -162,7 +164,7 @@ final class CameraViewModel: ObservableObject {
         cameraPermissionState = await permissionService.requestAccess()
         showPermissionAlert = shouldShowPermissionAlert
         if cameraPermissionState.canUseCamera {
-            catchLocationService.warmUpIfAuthorized()
+            await prepareLocationPermissionForCameraEntryIfNeeded()
         }
     }
 
@@ -171,6 +173,23 @@ final class CameraViewModel: ObservableObject {
         showPermissionAlert = shouldShowPermissionAlert
         if cameraPermissionState.canUseCamera {
             catchLocationService.warmUpIfAuthorized()
+        }
+    }
+
+    func prepareLocationPermissionForCameraEntryIfNeeded() async {
+        guard cameraPermissionState.canUseCamera else { return }
+
+        guard !didRequestLocationPermissionForSession else {
+            catchLocationService.warmUpIfAuthorized()
+            return
+        }
+
+        didRequestLocationPermissionForSession = true
+        let isAuthorized = await catchLocationService.requestAuthorizationIfNeeded()
+        if isAuthorized {
+            catchLocationService.warmUpIfAuthorized()
+        } else if catchLocationService.isAuthorizationDenied {
+            showLocationSettingsAlert = true
         }
     }
 
@@ -226,8 +245,13 @@ final class CameraViewModel: ObservableObject {
 
     func handleSceneBecameActive() {
         refreshPermissionState()
-        if cameraPermissionState.canUseCamera, !arService.isARReady {
-            startARCoachingGate()
+        if cameraPermissionState.canUseCamera {
+            Task {
+                await prepareLocationPermissionForCameraEntryIfNeeded()
+            }
+            if !arService.isARReady {
+                startARCoachingGate()
+            }
         }
     }
 
@@ -306,7 +330,7 @@ final class CameraViewModel: ObservableObject {
         capturedImage = image
         capturedSegmentedFishes = lockedFishes
         capturedLocation = await catchLocationService.requestCurrentLocation()
-        shouldPromptLocationSettingsInReview = catchLocationService.isAuthorizationDenied
+        shouldPromptLocationSettingsInReview = false
 
         let elapsedNanoseconds = DispatchTime.now().uptimeNanoseconds - captureFeedbackStartedAt
         if elapsedNanoseconds < minimumCaptureFeedbackNanoseconds {

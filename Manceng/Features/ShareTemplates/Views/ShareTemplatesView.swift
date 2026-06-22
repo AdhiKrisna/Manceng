@@ -20,14 +20,16 @@ struct ShareTemplatesView: View {
         species: String,
         weight: Double,
         length: Double,
-        location: String?
+        location: String?,
+        capturedAt: Date = Date()
     ) {
         _viewModel = StateObject(wrappedValue: ShareTemplatesViewModel(
             fishImage: fishImage,
             species: species,
             weight: weight,
             length: length,
-            location: location
+            location: location,
+            capturedAt: capturedAt
         ))
     }
 
@@ -499,17 +501,25 @@ struct ShareTemplateCard: View {
             rotatedTemplateOneLabel(size)
                 .position(x: size.width * 0.16, y: size.height * 0.235)
 
-            VStack(alignment: .trailing, spacing: size.height * 0.012) {
+            VStack(alignment: .trailing, spacing: size.height * 0.004) {
                 Text(content.templateOneWeight)
                 Text(content.templateOneLength)
-                Text(content.year)
             }
-            .font(.impactRegular(size: size.width * 0.048))
+            .font(.system(size: size.width * 0.045, weight: .semibold))
             .foregroundStyle(Color.neutralColorPrimaryBlack50)
             .lineLimit(1)
             .minimumScaleFactor(0.65)
             .frame(width: size.width * 0.3, alignment: .trailing)
-            .position(x: size.width * 0.82, y: size.height * 0.105)
+            .position(x: size.width * 0.82, y: size.height * 0.086)
+
+            Text(content.timestamp)
+                .font(.helveticaNeueCondensedBlack(size: size.width * 0.034))
+                .tracking(size.width * 0.006)
+                .foregroundStyle(Color.neutralColorPrimaryBlack1.opacity(0.86))
+                .lineLimit(1)
+                .minimumScaleFactor(0.55)
+                .frame(width: size.width * 0.63, alignment: .leading)
+                .position(x: size.width * 0.36, y: size.height * 0.923)
         }
     }
 
@@ -538,8 +548,18 @@ struct ShareTemplateCard: View {
                 }
                     .frame(width: size.height * 0.24, alignment: .leading)
                     .rotationEffect(.degrees(-90))
-                    .position(x: size.width * 0.11, y: size.height * 0.112)
+                    .position(x: size.width * 0.095, y: size.height * 0.145)
             }
+
+            Text(content.timestamp)
+                .font(.helveticaNeueCondensedBlack(size: size.width * 0.035))
+                .tracking(size.width * 0.006)
+                .foregroundStyle(Color.neutralColorPrimaryBlack1.opacity(0.86))
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                .frame(width: size.height * 0.41, alignment: .leading)
+                .rotationEffect(.degrees(-90))
+                .position(x: size.width * 0.095, y: size.height * 0.675)
 
             Text(content.templateTwoWeight)
                 .font(.impactRegular(size: size.width * 0.058))
@@ -565,8 +585,8 @@ struct ShareTemplateCard: View {
         ZStack {
             fishView()
                 .scaleEffect(x: -1, y: -1)
-                .frame(width: size.width * 0.82, height: size.height * 0.72)
-                .position(x: size.width * 0.52, y: size.height * 0.58)
+                .frame(width: size.width * 0.76, height: size.height * 0.66)
+                .position(x: size.width * 0.52, y: size.height * 0.555)
 
             Text(content.templateThreeSpecies)
                 .font(.impactRegular(size: size.width * 0.22))
@@ -579,24 +599,32 @@ struct ShareTemplateCard: View {
 
             Text(content.templateThreeWeight)
                 .templateThreeMetric(size: size.width * 0.04)
-                .frame(width: size.width * 0.36, alignment: .leading)
-                .position(x: size.width * 0.28, y: size.height * 0.043)
+                .tracking(size.width * 0.004)
+                .frame(width: size.width * 0.44, alignment: .leading)
+                .position(x: size.width * 0.31, y: size.height * 0.043)
 
             Text(content.templateThreeLength)
                 .templateThreeMetric(size: size.width * 0.04)
-                .frame(width: size.width * 0.36, alignment: .trailing)
-                .position(x: size.width * 0.72, y: size.height * 0.043)
+                .tracking(size.width * 0.004)
+                .frame(width: size.width * 0.44, alignment: .trailing)
+                .position(x: size.width * 0.69, y: size.height * 0.043)
 
-            if let locationText = content.locationText {
-                Text(locationText)
-                    .font(.impactRegular(size: size.width * 0.032))
+            VStack(spacing: size.height * 0.011) {
+                if let locationText = content.locationText {
+                    Text(locationText)
+                        .font(.impactRegular(size: size.width * 0.04))
+                        .tracking(size.width * 0.007)
+                }
+
+                Text(content.timestamp)
+                    .font(.impactRegular(size: size.width * 0.033))
                     .tracking(size.width * 0.006)
-                    .foregroundStyle(.black)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
-                    .frame(width: size.width * 0.78)
-                    .position(x: size.width * 0.5, y: size.height * 0.965)
             }
+            .foregroundStyle(.black)
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+            .frame(width: size.width * 0.78)
+            .position(x: size.width * 0.5, y: size.height * 0.93)
         }
     }
 
@@ -682,9 +710,9 @@ private extension Text {
     func templateThreeMetric(size: CGFloat) -> some View {
         self
             .font(.impactRegular(size: size))
-            .foregroundStyle(Color.white.opacity(0.78))
+            .foregroundStyle(Color.white)
             .lineLimit(1)
-            .minimumScaleFactor(0.6)
+            .minimumScaleFactor(0.9)
     }
 }
 

@@ -123,6 +123,14 @@ struct CameraView: View {
         } message: {
             Text("Allow Camera access in Settings to use capture and fish segmentation.")
         }
+        .alert("Location access unavailable", isPresented: $viewModel.showLocationSettingsAlert) {
+            Button("Settings") {
+                viewModel.openSettings()
+            }
+            Button("Save as Unknown", role: .cancel) {}
+        } message: {
+            Text("Allow Location access in Settings to save where you caught the fish. Otherwise, the location will be saved as Unknown")
+        }
         .alert("Spesies ikan tidak diketahui", isPresented: $viewModel.showUnknownSpeciesAlert) {
             Button("Oke", role: .cancel) {}
         }
@@ -262,7 +270,7 @@ private struct CaptureScanningMessage: View {
                 .multilineTextAlignment(.center)
 
             if showSlowNotice {
-                Text("Scanning mungkin butuh waktu agak lama untuk pertama kali")
+                Text("Scanning may take a little longer for the first time")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)

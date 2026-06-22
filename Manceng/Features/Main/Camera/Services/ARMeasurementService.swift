@@ -424,7 +424,7 @@ final class ARMeasurementService: NSObject, ObservableObject {
             }
         case .normal:
             guard hasPlane else {
-                return "Find a nearby surface to measure"
+                return "Place the fish on a flat surface"
             }
             
             return "Keep the fish steady on a clear surface"

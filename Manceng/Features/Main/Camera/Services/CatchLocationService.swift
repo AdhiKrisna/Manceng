@@ -13,6 +13,7 @@ import MapKit
 final class CatchLocationService: NSObject, CLLocationManagerDelegate {
     private let manager = CLLocationManager()
     private var continuation: CheckedContinuation<CatchLocationMetadata?, Never>?
+    private var authorizationContinuation: CheckedContinuation<Bool, Never>?
     private var timeoutTask: Task<Void, Never>?
     private var cachedMetadata: CatchLocationMetadata?
     private var cachedMetadataDate: Date?
@@ -35,6 +36,23 @@ final class CatchLocationService: NSObject, CLLocationManagerDelegate {
             manager.startUpdatingLocation()
         default:
             break
+        }
+    }
+
+    func requestAuthorizationIfNeeded() async -> Bool {
+        switch manager.authorizationStatus {
+        case .authorizedAlways, .authorizedWhenInUse:
+            manager.startUpdatingLocation()
+            return true
+        case .denied, .restricted:
+            return false
+        case .notDetermined:
+            return await withCheckedContinuation { continuation in
+                authorizationContinuation = continuation
+                manager.requestWhenInUseAuthorization()
+            }
+        @unknown default:
+            return false
         }
     }
 
@@ -68,17 +86,27 @@ final class CatchLocationService: NSObject, CLLocationManagerDelegate {
 
     nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         Task { @MainActor in
+            let isAuthorized: Bool
+
             switch manager.authorizationStatus {
             case .authorizedAlways, .authorizedWhenInUse:
+                isAuthorized = true
                 manager.startUpdatingLocation()
-                manager.requestLocation()
+                if continuation != nil {
+                    manager.requestLocation()
+                }
             case .denied, .restricted:
+                isAuthorized = false
                 finish(with: validCachedMetadata)
             case .notDetermined:
-                break
+                return
             @unknown default:
+                isAuthorized = false
                 finish(with: validCachedMetadata)
             }
+
+            authorizationContinuation?.resume(returning: isAuthorized)
+            authorizationContinuation = nil
         }
     }
 

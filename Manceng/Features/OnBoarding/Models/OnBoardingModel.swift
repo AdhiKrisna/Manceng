@@ -23,17 +23,17 @@ let onBoardingData: [OnBoardingModel] = [
     OnBoardingModel(
         image: "onboarding1",
         title: "Capture",
-        caption: "Setiap tangkapan punya ceritanya sendiri. Abadikan momen istimewamu hanya dengan satu jepretan, dan biarkan aplikasi mengenali semua detailnya untukmu."
+        caption: "Every catch has a story. Capture your special moment with a single shot, and let the app identify all the details for you."
     ),
     OnBoardingModel(
         image: "onboarding2",
         title: "Summary",
-        caption: "Tak perlu repot mencatat satu per satu. Semua detail tangkapanmu dari jenis ikan, estimasi berat, hingga lokasi tersimpan rapi secara otomatis."
+        caption: "No need to keep track of everything manually. Your catch details, including species, estimated weight, length, and location, are automatically organized in one place."
     ),
     OnBoardingModel(
         image: "onboarding3",
         title: "Template",
-        caption: "Setiap ikan yang kamu tangkap layak untuk dikenang. Pilih template favoritmu dan bagikan momen terbaikmu dengan tampilan yang memukau."
+        caption: "Every fish you catch is worth remembering. Choose your favorite template and share your best catches with a stunning presentation."
     )
 ]
 

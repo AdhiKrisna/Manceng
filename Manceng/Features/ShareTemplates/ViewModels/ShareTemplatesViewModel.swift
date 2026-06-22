@@ -21,7 +21,7 @@ struct ShareTemplateDisplayContent {
     let templateThreeWeight: String
     let templateThreeLength: String
     let templateThreeSpecies: String
-    let year: String
+    let timestamp: String
     let showsLocation: Bool
 }
 
@@ -33,6 +33,7 @@ final class ShareTemplatesViewModel: ObservableObject {
     @Published var weight: Double
     @Published var length: Double
     @Published var location: String?
+    @Published var capturedAt: Date
     @Published var currentPageIndex: Int = 0
     @Published var scrollPositionID: Int? = 0
 
@@ -41,13 +42,15 @@ final class ShareTemplatesViewModel: ObservableObject {
         species: String,
         weight: Double,
         length: Double,
-        location: String?
+        location: String?,
+        capturedAt: Date = Date()
     ) {
         self.fishImage = fishImage
         self.species = species
         self.weight = weight
         self.length = length
         self.location = location
+        self.capturedAt = capturedAt
     }
 
     func renderTemplate() -> some View {
@@ -70,14 +73,14 @@ final class ShareTemplatesViewModel: ObservableObject {
             speciesText: displaySpeciesText,
             locationText: cleanLocation?.uppercased(),
             speciesVerticalGlyphs: verticalGlyphs(from: displaySpeciesText),
-            templateOneWeight: formattedWeight,
-            templateOneLength: formattedLength,
-            templateTwoWeight: "WEIGHT : \(formattedWeight)",
-            templateTwoLength: "HEIGHT : \(formattedLength)",
-            templateThreeWeight: "Weight . \(formattedWeight)",
-            templateThreeLength: "Length . \(formattedLength)",
+            templateOneWeight: "±\(formattedWeight)",
+            templateOneLength: "±\(formattedLength)",
+            templateTwoWeight: "WEIGHT: ±\(formattedWeightCompactUpper)",
+            templateTwoLength: "LENGTH: ±\(formattedLengthCompactUpper)",
+            templateThreeWeight: "Weight . ±\(formattedWeightUpper)",
+            templateThreeLength: "Length . ±\(formattedLengthUpper)",
             templateThreeSpecies: templateThreeSpeciesText,
-            year: currentYear,
+            timestamp: formattedTimestamp,
             showsLocation: cleanLocation != nil
         )
     }
@@ -100,9 +103,32 @@ final class ShareTemplatesViewModel: ObservableObject {
         "\(Int(round(length))) Cm"
     }
 
-    private var currentYear: String {
-        "\(Calendar.current.component(.year, from: Date()))"
+    private var formattedWeightUpper: String {
+        formattedWeight.uppercased()
     }
+
+    private var formattedLengthUpper: String {
+        formattedLength.uppercased()
+    }
+
+    private var formattedWeightCompactUpper: String {
+        formattedWeight.replacingOccurrences(of: " ", with: "").uppercased()
+    }
+
+    private var formattedLengthCompactUpper: String {
+        formattedLength.replacingOccurrences(of: " ", with: "").uppercased()
+    }
+
+    private var formattedTimestamp: String {
+        Self.timestampFormatter.string(from: capturedAt)
+    }
+
+    private static let timestampFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "EEEE. dd MMM yyyy. HH.mm"
+        return formatter
+    }()
 
     private var cleanedLocation: String? {
         guard let location else { return nil }

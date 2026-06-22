@@ -82,7 +82,8 @@ struct CatchDetailView: View {
                     species: catchModel.species,
                     weight: catchModel.weight,
                     length: catchModel.length,
-                    location: catchModel.location ?? "Unknown"
+                    location: catchModel.location ?? "Unknown",
+                    capturedAt: catchModel.capturedAt
                 )
             }
         }

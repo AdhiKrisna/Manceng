@@ -60,6 +60,10 @@ final class CatchReviewViewModel: ObservableObject {
         locationMetadata?.displayName ?? "Unknown"
     }
 
+    var capturedAt: Date {
+        savedCatchModel?.capturedAt ?? Date()
+    }
+
     init(
         image: UIImage?,
         segmentedFishes: [SegmentedFish],

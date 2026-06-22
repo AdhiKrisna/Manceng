@@ -21,4 +21,8 @@ extension Font {
     static func impactRegular(size: CGFloat) -> Font {
         Font.custom("Impact", size: size)
     }
+
+    static func helveticaNeueCondensedBlack(size: CGFloat) -> Font {
+        Font.custom("HelveticaNeue-CondensedBlack", size: size)
+    }
 }
