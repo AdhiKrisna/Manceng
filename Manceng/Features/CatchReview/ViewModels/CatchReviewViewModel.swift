@@ -20,6 +20,7 @@ final class CatchReviewViewModel: ObservableObject {
     private let locationMetadata: CatchLocationMetadata?
     private let primaryFish: DetectedFish?
     private var savedCatchModel: CatchModel?
+    private let temporaryLocationName = "Sekilak Beach, Batam"
 
     var fishName: String {
         primaryFish?.species ?? "Unfortunately, we couldn't identify this fish"
@@ -57,7 +58,7 @@ final class CatchReviewViewModel: ObservableObject {
     }
 
     var locationDisplayText: String {
-        locationMetadata?.displayName ?? "Unknown"
+        temporaryLocationName
     }
 
     var capturedAt: Date {
@@ -72,7 +73,7 @@ final class CatchReviewViewModel: ObservableObject {
     ) {
         self.image = image
         self.locationMetadata = locationMetadata
-        self.showLocationSettingsAlert = shouldPromptLocationSettings
+        self.showLocationSettingsAlert = false
         let primarySegmentedFish = segmentedFishes.max { $0.fish.confidence < $1.fish.confidence }
         self.primaryFish = primarySegmentedFish?.fish
 
@@ -129,8 +130,8 @@ final class CatchReviewViewModel: ObservableObject {
             weight: weightValue,
             length: lengthValue,
             location: locationDisplayText,
-            latitude: locationMetadata?.latitude,
-            longitude: locationMetadata?.longitude
+            latitude: nil,
+            longitude: nil
         )
     }
 

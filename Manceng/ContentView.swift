@@ -12,16 +12,23 @@ import SwiftUI
 struct ContentView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @State private var selectedMainTab: MainView.Tab = .home
+    @State private var isShowingSplash = true
     
     var body: some View {
-        if hasCompletedOnboarding {
-            MainView(
-                selectedTab: $selectedMainTab,
-                showWalkthrough: false
-            )
+        if isShowingSplash {
+            SplashScreenView {
+                isShowingSplash = false
+            }
         } else {
-            OnBoardingView {
-                hasCompletedOnboarding = true
+            if hasCompletedOnboarding {
+                MainView(
+                    selectedTab: $selectedMainTab,
+                    showWalkthrough: false
+                )
+            } else {
+                OnBoardingView {
+                    hasCompletedOnboarding = true
+                }
             }
         }
     }
