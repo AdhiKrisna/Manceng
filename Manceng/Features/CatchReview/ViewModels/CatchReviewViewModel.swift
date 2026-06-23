@@ -20,7 +20,7 @@ final class CatchReviewViewModel: ObservableObject {
     private let locationMetadata: CatchLocationMetadata?
     private let primaryFish: DetectedFish?
     private var savedCatchModel: CatchModel?
-    private let temporaryLocationName = "Sekilak Beach, Batam"
+    private let temporaryLocationName = "South China Sea"
 
     var fishName: String {
         primaryFish?.species ?? "Unfortunately, we couldn't identify this fish"
