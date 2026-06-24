@@ -42,6 +42,17 @@ struct HomeView: View {
     // Ikan yang sedang fokus di carousel (penentu nilai ruler/berat/judul sticky).
     @State private var currentCatchID: UUID?
 
+    private var activeCatchID: UUID? {
+        currentCatchID ?? displayedCatches.first?.id
+    }
+
+    private var carouselScrollPosition: Binding<UUID?> {
+        Binding(
+            get: { activeCatchID },
+            set: { currentCatchID = $0 ?? displayedCatches.first?.id }
+        )
+    }
+
     /// Ikan yang ditampilkan, diurutkan sesuai filter, maksimal 5.
     private var displayedCatches: [CatchModel] {
         let sorted: [CatchModel]
@@ -81,7 +92,7 @@ struct HomeView: View {
 
     /// Ikan yang sedang fokus (untuk nilai ruler/berat/judul yang sticky).
     private var currentCatch: CatchModel? {
-        if let id = currentCatchID {
+        if let id = activeCatchID {
             return displayedCatches.first { $0.id == id } ?? displayedCatches.first
         }
         return displayedCatches.first
@@ -128,10 +139,7 @@ struct HomeView: View {
                 .padding(.trailing, 20)
                 .padding(.top, 30)
         }
-        .onAppear {
-            if currentCatchID == nil { currentCatchID = displayedCatches.first?.id }
-            carouselMotion.start()
-        }
+        .onAppear { carouselMotion.start() }
         .onDisappear { carouselMotion.stop() }
         .onChange(of: selectedSort) { _, _ in
             currentCatchID = displayedCatches.first?.id
@@ -178,7 +186,7 @@ struct HomeView: View {
                         let lengthCm = max(1, Int(c.length.rounded()))
                         let rulerLengthCm = min(lengthCm, 60)
                         let fishHeight = 240 + (CGFloat(rulerLengthCm) / 60) * 240
-                        let isActive = currentCatchID == c.id
+                        let isActive = activeCatchID == c.id
                         
                         VStack(spacing: 0) {
                             fishImageView(c: c, fishHeight: fishHeight, isActive: isActive)
@@ -195,7 +203,7 @@ struct HomeView: View {
             }
             .contentMargins(.horizontal, currentFishPeek, for: .scrollContent)
             .scrollTargetBehavior(.viewAligned)
-            .scrollPosition(id: $currentCatchID)
+            .scrollPosition(id: carouselScrollPosition)
             .scrollIndicators(.hidden)
             .animation(.spring(response: 0.4, dampingFraction: 0.85, blendDuration: 0), value: currentCatchID)
         }

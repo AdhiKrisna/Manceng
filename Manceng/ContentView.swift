@@ -15,22 +15,29 @@ struct ContentView: View {
     @State private var isShowingSplash = true
     
     var body: some View {
-        if isShowingSplash {
-            SplashScreenView {
-                isShowingSplash = false
-            }
-        } else {
-            if hasCompletedOnboarding {
+        ZStack {
+            if isShowingSplash {
+                SplashScreenView {
+                    isShowingSplash = false
+                }
+                .transition(.opacity)
+            } else if hasCompletedOnboarding {
                 MainView(
                     selectedTab: $selectedMainTab,
                     showWalkthrough: false
                 )
+                .transition(.opacity)
             } else {
                 OnBoardingView {
-                    hasCompletedOnboarding = true
+                    withAnimation(.easeInOut(duration: 0.35)) {
+                        hasCompletedOnboarding = true
+                    }
                 }
+                .transition(.opacity)
             }
         }
+        .animation(.easeInOut(duration: 0.35), value: isShowingSplash)
+        .animation(.easeInOut(duration: 0.35), value: hasCompletedOnboarding)
     }
 }
 

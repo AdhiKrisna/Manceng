@@ -20,31 +20,41 @@ struct OnBoardingView: View {
         VStack {
             TabView(selection: $currentPage) {
                 ForEach(data.indices, id: \.self) { index in
-                    let item = data[index]
-                    OnBoarding(
-                        image: Image(item.image),
-                        title: item.title,
-                        caption: item.caption,
-                        imageSize: item.image == "onboarding" ? CGSize(width: 250, height: 250) : nil,
-                        containerSize: item.image == "onboarding" ? CGSize(width: 400, height: 300) : nil,
-                        imageOffsetY: item.image == "onboarding" ? 0 : 30
-                    )
+                    pageView(for: index)
                     .tag(index)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
+            .animation(.easeInOut(duration: 0.28), value: currentPage)
             
             Spacer().frame(height: 80)
             
             CustomButton(title: currentPage == data.count - 1 ? "Start" : "Next") {
                 if currentPage < data.count - 1 {
-                    currentPage += 1
+                    withAnimation(.easeInOut(duration: 0.28)) {
+                        currentPage += 1
+                    }
                 } else {
                     onComplete()
                 }
             }
         }
         .background(Color.brandColorPrimaryYellow.ignoresSafeArea())
+    }
+
+    private func pageView(for index: Int) -> some View {
+        let item = data[index]
+
+        return OnBoarding(
+            image: Image(item.image),
+            title: item.title,
+            caption: item.caption,
+            imageSize: item.image == "onboarding" ? CGSize(width: 250, height: 250) : nil,
+            containerSize: item.image == "onboarding" ? CGSize(width: 400, height: 300) : nil,
+            imageOffsetY: item.image == "onboarding" ? 0 : 30
+        )
+        .opacity(currentPage == index ? 1 : 0.25)
+        .animation(.easeInOut(duration: 0.28), value: currentPage)
     }
 }
 
