@@ -81,3 +81,7 @@ GoogleService-Info.plist
 *.mlmodel
 *.mlmodelc
 *.mlpackage/
+
+# Core Assets
+Manceng/Domains/Cores/
+Manceng/Domains/Cores.zip
