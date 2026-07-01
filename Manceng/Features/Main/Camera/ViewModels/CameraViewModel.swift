@@ -24,7 +24,6 @@ final class CameraViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var showPermissionAlert = false
     @Published var showLocationSettingsAlert = false
-    @Published var showUnknownSpeciesAlert = false
     @Published var showCameraGuide = false
     @Published var shouldShowARCoaching = true
     private var isScanningPaused = false
@@ -36,7 +35,6 @@ final class CameraViewModel: ObservableObject {
     private lazy var catchLocationService = CatchLocationService()
     private lazy var classificationService = FishClassificationService()
     private let weightEstimationService = FishWeightEstimationService()
-    private let minimumClassificationConfidence = 0.80
     private let scanIntervalNanoseconds: UInt64 = 900_000_000
     private let minimumCaptureFeedbackNanoseconds: UInt64 = 650_000_000
     private let cameraGuideSeenKey = "hasSeenCameraGuide"
@@ -51,8 +49,7 @@ final class CameraViewModel: ObservableObject {
         cameraPermissionState.canUseCamera &&
         arService.isARReady &&
         !isCapturing &&
-        hasReliableFishMeasurement &&
-        hasValidFishOrientation
+        segmentedFishes.count == 1
     }
 
     var centerInstructionText: String {
@@ -63,10 +60,6 @@ final class CameraViewModel: ObservableObject {
             return "Show 1 fish clearly in view"
         case .multipleFish:
             return "Only 1 fish can be scanned at a time"
-        case .invalidOrientation:
-            return "Turn the fish so its head faces left"
-        case .measuringLength:
-            return measurementInstructionText
         case .ready:
             return "Ready to capture"
         }
@@ -80,10 +73,6 @@ final class CameraViewModel: ObservableObject {
             return "Currently no fish is visible"
         case .multipleFish:
             return "Currently more than one fish is displayed in the camera"
-        case .invalidOrientation:
-            return "Currently the fish head is outside the allowed angle"
-        case .measuringLength:
-            return "Currently making sure the fish is ready to measure..."
         }
     }
 
@@ -96,30 +85,10 @@ final class CameraViewModel: ObservableObject {
         cameraPermissionState == .denied || cameraPermissionState == .restricted
     }
 
-    private var hasValidFishOrientation: Bool {
-        guard segmentedFishes.count == 1,
-              let segmentedFish = segmentedFishes.first else {
-            return false
-        }
-
-        return segmentedFish.orientationAnalysis?.isHeadAllowedForCapture == true
-    }
-
-    private var hasReliableFishMeasurement: Bool {
-        guard segmentedFishes.count == 1,
-              let length = segmentedFishes.first?.fish.estimatedLengthCm else {
-            return false
-        }
-
-        return length.isFinite && length > 0
-    }
-
     private enum CenterInstructionState {
         case waitingForAR
         case noFish
         case multipleFish
-        case invalidOrientation
-        case measuringLength
         case ready
     }
 
@@ -130,21 +99,10 @@ final class CameraViewModel: ObservableObject {
         case 0:
             return .noFish
         case 1:
-            guard hasValidFishOrientation else { return .invalidOrientation }
-            guard hasReliableFishMeasurement else { return .measuringLength }
             return .ready
         default:
             return .multipleFish
         }
-    }
-
-    private var measurementInstructionText: String {
-        let guidance = arService.measurementGuidance
-        if guidance == "Turn the fish so its head faces left" {
-            return "Keep the fish steady on a clear surface"
-        }
-
-        return guidance
     }
 
     func prepareCameraPermission() async {
@@ -308,15 +266,6 @@ final class CameraViewModel: ObservableObject {
             errorMessage = segmentedFishes.isEmpty ? "No fish detected yet" : "Make sure only 1 fish is visible"
             return
         }
-        guard let lockedFish = lockedFishes.first,
-              lockedFish.orientationAnalysis?.isHeadAllowedForCapture == true else {
-            errorMessage = "Turn the fish so its head faces left"
-            return
-        }
-        guard (lockedFish.fish.speciesConfidence ?? 0) >= minimumClassificationConfidence else {
-            showUnknownSpeciesAlert = true
-            return
-        }
         guard let image = scannedImage else {
             errorMessage = "Camera is not ready yet"
             return
@@ -352,7 +301,6 @@ final class CameraViewModel: ObservableObject {
         arService.setFramePublishingEnabled(true)
         isCapturing = false
         errorMessage = nil
-        showUnknownSpeciesAlert = false
         Task {
             await startScanning()
         }

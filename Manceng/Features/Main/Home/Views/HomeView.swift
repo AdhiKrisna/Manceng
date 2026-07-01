@@ -41,6 +41,10 @@ struct HomeView: View {
 
     // Ikan yang sedang fokus di carousel (penentu nilai ruler/berat/judul sticky).
     @State private var currentCatchID: UUID?
+    @State private var fishEntranceReveal: CGFloat = 0.001
+    @State private var fishEntranceXOffset: CGFloat = 0
+    @State private var fishEntranceYOffset: CGFloat = -1600
+    @State private var fishEntranceRotation: Double = 0
 
     private var activeCatchID: UUID? {
         currentCatchID ?? displayedCatches.first?.id
@@ -139,7 +143,10 @@ struct HomeView: View {
                 .padding(.trailing, 20)
                 .padding(.top, 30)
         }
-        .onAppear { carouselMotion.start() }
+        .onAppear {
+            carouselMotion.start()
+            playFishEntranceAnimation()
+        }
         .onDisappear { carouselMotion.stop() }
         .onChange(of: selectedSort) { _, _ in
             currentCatchID = displayedCatches.first?.id
@@ -218,22 +225,28 @@ struct HomeView: View {
                 let tilt = currentTilt()
                 ZStack(alignment: .bottom) {
                     contactShadow(tilt: tilt)
-                    fishImageOnly(c: c, fishHeight: fishHeight, isActive: true)
+                    fishImageOnly(c: c, fishHeight: fishHeight)
                         .offset(x: tilt.parallaxX, y: tilt.parallaxY)
                         .rotation3DEffect(.degrees(tilt.rotX), axis: (x: 1, y: 0, z: 0), perspective: 0.5)
                         .rotation3DEffect(.degrees(tilt.rotY), axis: (x: 0, y: 1, z: 0), perspective: 0.5)
                 }
             }
         } else {
-            fishImageOnly(c: c, fishHeight: fishHeight, isActive: false)
+            fishImageOnly(c: c, fishHeight: fishHeight)
         }
     }
 
-    private func fishImageOnly(c: CatchModel, fishHeight: CGFloat, isActive: Bool) -> some View {
+    private func fishImageOnly(c: CatchModel, fishHeight: CGFloat) -> some View {
         Image(uiImage: c.image)
             .resizable()
             .scaledToFit()
             .frame(height: fishHeight)
+            .rotationEffect(.degrees(fishEntranceRotation), anchor: .top)
+            .offset(x: fishEntranceXOffset, y: fishEntranceYOffset)
+            .mask(alignment: .top) {
+                Rectangle()
+                    .scaleEffect(y: fishEntranceReveal, anchor: .top)
+            }
             .contentShape(Rectangle())
             .onTapGesture {
                 detailCatch = c
@@ -329,6 +342,60 @@ struct HomeView: View {
         .padding(24)
         .onAppear { emptyStateMotion.start() }
         .onDisappear { emptyStateMotion.stop() }
+    }
+
+    private func playFishEntranceAnimation() {
+        fishEntranceReveal = 0.001
+        fishEntranceXOffset = 0
+        fishEntranceYOffset = -1600
+        fishEntranceRotation = 0
+
+        Task { @MainActor in
+            withAnimation(.easeOut(duration: 0.58)) {
+                fishEntranceReveal = 1
+                fishEntranceYOffset = 0
+            }
+
+            try? await Task.sleep(nanoseconds: 580_000_000)
+
+            withAnimation(.spring(response: 0.22, dampingFraction: 0.58)) {
+                fishEntranceYOffset = -18
+            }
+
+            try? await Task.sleep(nanoseconds: 170_000_000)
+
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.7)) {
+                fishEntranceYOffset = 0
+            }
+
+            try? await Task.sleep(nanoseconds: 180_000_000)
+
+            withAnimation(.easeInOut(duration: 0.18)) {
+                fishEntranceXOffset = 10
+                fishEntranceRotation = 5
+            }
+
+            try? await Task.sleep(nanoseconds: 180_000_000)
+
+            withAnimation(.easeInOut(duration: 0.2)) {
+                fishEntranceXOffset = -8
+                fishEntranceRotation = -4
+            }
+
+            try? await Task.sleep(nanoseconds: 200_000_000)
+
+            withAnimation(.easeInOut(duration: 0.22)) {
+                fishEntranceXOffset = 5
+                fishEntranceRotation = 2.4
+            }
+
+            try? await Task.sleep(nanoseconds: 220_000_000)
+
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) {
+                fishEntranceXOffset = 0
+                fishEntranceRotation = 0
+            }
+        }
     }
 }
 

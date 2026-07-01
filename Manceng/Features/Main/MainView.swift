@@ -71,8 +71,7 @@ struct MainView: View {
                     }
                     .padding(.horizontal, 6)
                     .padding(.vertical, 4)
-                    .glassEffect(in: Capsule())
-                    // .glassEffect(.regular.interactive(), in: Capsule())
+                    .glassStyle(Capsule())
                     .frame(maxWidth: .infinity)
 
                     // Right Circle (Camera Action)
@@ -83,9 +82,10 @@ struct MainView: View {
                             .font(.system(size: 20, weight: .semibold))
                             .foregroundColor(.neutralColorPrimaryBlack1)
                             .frame(width: 60, height: 60)
-                            .glassEffect(in: Circle())
-                            .contentShape(Circle())
+                            .frame(width: 68, height: 68)
+                            .glassStyle(Circle())
                     }
+                    .contentShape(Circle())
                     .buttonStyle(GlassPressStyle())
                     .disabled(isOpeningCamera)
                 }
@@ -150,6 +150,7 @@ struct MainView: View {
             .padding(.vertical, 5)
             .padding(.horizontal, 12)
             .frame(maxWidth: .infinity)
+            .frame(minHeight: 58)
             .background {
                 if isSelected {
                     Capsule()
@@ -157,6 +158,7 @@ struct MainView: View {
                 }
             }
             .foregroundColor(isSelected ? .blue : .neutralColorPrimaryBlack1)
+            .contentShape(Rectangle())
         }
         .buttonStyle(GlassPressStyle())
     }

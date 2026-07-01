@@ -38,6 +38,7 @@ struct ContentView: View {
         }
         .animation(.easeInOut(duration: 0.35), value: isShowingSplash)
         .animation(.easeInOut(duration: 0.35), value: hasCompletedOnboarding)
+        .preferredColorScheme(.light)
     }
 }
 

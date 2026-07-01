@@ -65,3 +65,19 @@ fastlane/test_output
 # macOS
 .DS_Store
 **/.DS_Store
+
+# Xcode local state
+*.xcuserstate
+
+# Local config / secrets
+.env
+*.env
+Config.xcconfig
+Secrets.xcconfig
+GoogleService-Info.plist
+!Config.example.xcconfig
+
+# Core ML models
+*.mlmodel
+*.mlmodelc
+*.mlpackage/

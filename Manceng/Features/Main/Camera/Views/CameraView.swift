@@ -131,9 +131,6 @@ struct CameraView: View {
         } message: {
             Text("Allow Location access in Settings to save where you caught the fish. Otherwise, the location will be saved as Unknown")
         }
-        .alert("Spesies ikan tidak diketahui", isPresented: $viewModel.showUnknownSpeciesAlert) {
-            Button("Oke", role: .cancel) {}
-        }
     }
 
     private var topControls: some View {

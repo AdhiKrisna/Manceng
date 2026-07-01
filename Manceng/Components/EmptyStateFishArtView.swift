@@ -24,6 +24,10 @@ struct EmptyStateFishArtView: View {
     private let maxParallax: Double = 7
 
     @State private var tiltSmoother = EmptyStateFishTiltSmoother()
+    @State private var entranceReveal: CGFloat = 0.001
+    @State private var entranceXOffset: CGFloat = 0
+    @State private var entranceYOffset: CGFloat = -1600
+    @State private var entranceRotation: Double = 0
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1.0 / 60.0)) { _ in
@@ -40,7 +44,13 @@ struct EmptyStateFishArtView: View {
                         .scaledToFit()
                         .frame(height: fishHeight)
                         .rotationEffect(baseRotation)
+                        .rotationEffect(.degrees(entranceRotation), anchor: .top)
                         .offset(x: visualCenterOffsetX + tilt.parallaxX, y: tilt.parallaxY)
+                        .offset(x: entranceXOffset, y: entranceYOffset)
+                        .mask(alignment: .top) {
+                            Rectangle()
+                                .scaleEffect(y: entranceReveal, anchor: .top)
+                        }
                         .rotation3DEffect(.degrees(tilt.rotX), axis: (x: 1, y: 0, z: 0), perspective: 0.5)
                         .rotation3DEffect(.degrees(tilt.rotY), axis: (x: 0, y: 1, z: 0), perspective: 0.5)
                         .shadow(color: .black.opacity(0.35), radius: 18, x: 0, y: 30)
@@ -54,6 +64,9 @@ struct EmptyStateFishArtView: View {
 
                 Spacer(minLength: 0)
             }
+        }
+        .onAppear {
+            playEntranceAnimation()
         }
     }
 
@@ -85,5 +98,59 @@ struct EmptyStateFishArtView: View {
             .offset(x: visualCenterOffsetX + tilt.parallaxX, y: 52)
             .blur(radius: 12)
             .allowsHitTesting(false)
+    }
+
+    private func playEntranceAnimation() {
+        entranceReveal = 0.001
+        entranceXOffset = 0
+        entranceYOffset = -1600
+        entranceRotation = 0
+
+        Task { @MainActor in
+            withAnimation(.easeOut(duration: 0.58)) {
+                entranceReveal = 1
+                entranceYOffset = 0
+            }
+
+            try? await Task.sleep(nanoseconds: 580_000_000)
+
+            withAnimation(.spring(response: 0.22, dampingFraction: 0.58)) {
+                entranceYOffset = -18
+            }
+
+            try? await Task.sleep(nanoseconds: 170_000_000)
+
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.7)) {
+                entranceYOffset = 0
+            }
+
+            try? await Task.sleep(nanoseconds: 180_000_000)
+
+            withAnimation(.easeInOut(duration: 0.18)) {
+                entranceXOffset = 10
+                entranceRotation = 5
+            }
+
+            try? await Task.sleep(nanoseconds: 180_000_000)
+
+            withAnimation(.easeInOut(duration: 0.2)) {
+                entranceXOffset = -8
+                entranceRotation = -4
+            }
+
+            try? await Task.sleep(nanoseconds: 200_000_000)
+
+            withAnimation(.easeInOut(duration: 0.22)) {
+                entranceXOffset = 5
+                entranceRotation = 2.4
+            }
+
+            try? await Task.sleep(nanoseconds: 220_000_000)
+
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) {
+                entranceXOffset = 0
+                entranceRotation = 0
+            }
+        }
     }
 }
